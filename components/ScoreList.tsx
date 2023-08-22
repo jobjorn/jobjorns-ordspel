@@ -166,10 +166,6 @@ export const SingleScore = ({
               flexDirection: 'row'
             }}
           >
-            {Array.from(
-              { length: Math.floor(Math.random() * 5) + 2 },
-              () => '*'
-            )}
             <SingleScorePoints points={'?'} won={false} />
           </div>
         </TableCell>
@@ -192,7 +188,23 @@ export const SingleScore = ({
       );
     }
   } else {
-    if (move && move.playedWord) {
+    if (move && move.playedWord && isCurrentTurn) {
+      return (
+        <TableCell>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              flexDirection: 'row'
+            }}
+          >
+            {move.playedWord}
+            <SingleScorePoints points={move.playedPoints} />
+          </div>
+        </TableCell>
+      );
+    } else if (move && move.playedWord && !isCurrentTurn) {
       return (
         <TableCell>
           <div
@@ -235,20 +247,20 @@ export const SingleScorePoints = ({
   won
 }: {
   points?: number | string;
-  won: boolean;
+  won?: boolean;
 }) => {
   if (typeof points === 'undefined') {
     points = 0;
   }
   let pointsColor;
   let textColor;
-  if (typeof points === 'string') {
+  if (typeof points === 'string' || typeof won === 'undefined') {
     pointsColor = grey[500];
     textColor = 'white';
-  } else if (won) {
+  } else if (won === true) {
     pointsColor = amber[500];
     textColor = 'black';
-  } else {
+  } else if (won === false) {
     pointsColor = blue[500];
     textColor = 'white';
   }
