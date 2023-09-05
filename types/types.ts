@@ -17,6 +17,12 @@ export interface ErrorResponse {
 
 export type ResponseType<T> = SuccessResponse<T> | ErrorResponse;
 
+export type StatsData = {
+  day: string;
+  unique_users_with_turns: number;
+  total_moves: number;
+}[];
+
 export type GameWithEverything = Prisma.GameGetPayload<{
   include: {
     users: {
