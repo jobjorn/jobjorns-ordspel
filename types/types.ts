@@ -1,9 +1,15 @@
+import { AlertColor } from '@mui/material';
 import { Prisma } from '@prisma/client';
 
 export interface Tile {
   letter: string;
   placed: string;
 }
+
+export type Alert = {
+  severity: AlertColor;
+  message: string;
+};
 
 export interface SuccessResponse<T> {
   success: true;
