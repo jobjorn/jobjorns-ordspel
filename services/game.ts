@@ -1,5 +1,6 @@
-import { allLettersData, bonusPointsSums } from 'data/defaults';
+import { allLetters, allLettersData, bonusPointsSums } from 'data/defaults';
 import { Tile } from 'types/types';
+import { shuffleArray } from './helpers';
 // import { ResponseType } from 'types/types';
 
 export const checkTilesPlayed = (board: Tile[][]) => {
@@ -225,4 +226,54 @@ export const tilePoints = (board: Tile[][]) => {
   }
 
   return bonusPoints;
+};
+
+const checkStartLetters = (letters: string[]) => {
+  const vowels = ['A', 'E', 'I', 'O', 'U', 'Y', 'Å', 'Ä', 'Ö'];
+  const consonants = [
+    'B',
+    'C',
+    'D',
+    'F',
+    'G',
+    'H',
+    'J',
+    'K',
+    'L',
+    'M',
+    'N',
+    'P',
+    'Q',
+    'R',
+    'S',
+    'T',
+    'V',
+    'W',
+    'X',
+    'Z'
+  ];
+
+  letters = letters.slice(0, 8);
+
+  const vowelsCount = letters.filter((letter) =>
+    vowels.includes(letter)
+  ).length;
+  const consonantsCount = letters.filter((letter) =>
+    consonants.includes(letter)
+  ).length;
+
+  if (vowelsCount >= 3 && consonantsCount >= 4) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+export const shuffleStartLetters = () => {
+  let letters: string[] = shuffleArray(allLetters());
+  while (!checkStartLetters(letters)) {
+    letters = shuffleArray(allLetters());
+  }
+
+  return letters;
 };

@@ -21,7 +21,8 @@ import { getUser, updateUser } from 'services/local';
 const SettingsPage: NextPage<{}> = () => {
   const [loading, setLoading] = useState(true);
   const [databaseUser, setDatabaseUser] = useState<User | null>(null);
-  const [settingVisibility, setSettingVisibility] = useState<boolean>(true);
+  const [settingVisibility, setSettingVisibility] = useState<boolean>(false);
+  const [settingReminders, setSettingReminders] = useState<boolean>(false);
 
   const { user } = useUser();
 
@@ -45,15 +46,31 @@ const SettingsPage: NextPage<{}> = () => {
   useEffect(() => {
     if (databaseUser) {
       setSettingVisibility(databaseUser.settingVisibility);
+      setSettingReminders(databaseUser.receiveReminders);
     }
   }, [databaseUser]);
 
   const toggleVisibility = async () => {
     if (databaseUser) {
-      setSettingVisibility(!settingVisibility);
+      let newSettingVisibility = !settingVisibility;
+      setSettingVisibility(newSettingVisibility);
 
       let newUser = { ...databaseUser };
-      newUser.settingVisibility = !settingVisibility;
+      newUser.settingVisibility = newSettingVisibility;
+      let updateResponse = await updateUser(newUser);
+      if (updateResponse && updateResponse.success) {
+        setDatabaseUser(updateResponse.data);
+      }
+    }
+  };
+
+  const toggleReminders = async () => {
+    if (databaseUser) {
+      let newSettingReminders = !settingReminders;
+      setSettingReminders(newSettingReminders);
+
+      let newUser = { ...databaseUser };
+      newUser.receiveReminders = newSettingReminders;
       let updateResponse = await updateUser(newUser);
       if (updateResponse && updateResponse.success) {
         setDatabaseUser(updateResponse.data);
@@ -83,6 +100,17 @@ const SettingsPage: NextPage<{}> = () => {
             Inställningar
           </Typography>
           <List>
+            <ListItem
+              onClick={() => toggleReminders()}
+              secondaryAction={
+                <Switch checked={settingReminders} onChange={toggleReminders} />
+              }
+              disablePadding
+            >
+              <ListItemButton>
+                Skicka mig påminnelser (via e-post)
+              </ListItemButton>
+            </ListItem>
             <ListItem
               onClick={() => toggleVisibility()}
               secondaryAction={

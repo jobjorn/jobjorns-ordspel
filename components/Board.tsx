@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
-  AlertColor,
   Backdrop,
   Button,
   Container,
@@ -12,7 +11,11 @@ import {
   styled
 } from '@mui/material';
 import { defaultBoard } from 'data/defaults';
-import { GameWithEverything, Tile as TileType } from 'types/types';
+import {
+  GameWithEverything,
+  Tile as TileType,
+  Alert as AlertType
+} from 'types/types';
 import { User } from '@prisma/client';
 import { submitMove } from 'services/local';
 import { Tile } from './Tile';
@@ -41,11 +44,6 @@ interface BoardProps {
   fetchGame: (gameId: number) => void;
 }
 
-type Alert = {
-  severity: AlertColor;
-  message: string;
-};
-
 export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
   const [unplayedBoard, setUnplayedBoard] = useState<TileType[][]>(
     defaultBoard()
@@ -53,7 +51,7 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
   const [tiles, setTiles] = useState<TileType[]>([]);
   const [selectedTile, setSelectedTile] = useState<TileType>(emptyTile);
   const [playerHasSubmitted, setPlayerHasSubmitted] = useState<boolean>(false);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alerts, setAlerts] = useState<AlertType[]>([]);
   const [backdrop, setBackdrop] = useState<boolean>(false);
   const [shakingTiles, setShakingTiles] = useState<number[]>([]);
   const [placedTiles, setPlacedTiles] = useState<number[]>([]);
@@ -61,7 +59,7 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
   const [bonusPoints, setBonusPoints] = useState<number>(0);
   const [nameList, setNameList] = useState<string>('');
 
-  const addAlerts = (newAlerts: Alert[]) => {
+  const addAlerts = (newAlerts: AlertType[]) => {
     setAlerts([...alerts, ...newAlerts]);
     setBackdrop(true);
   };
@@ -272,7 +270,7 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
     let coherentWord = checkCoherentWord(copiedBoard); // placerade brickor får inte ha ett mellanrum
     let adjacentPlacement = checkAdjacentPlacement(copiedBoard); // brickor får inte placeras som en egen ö
 
-    let newAlerts: Alert[] = [];
+    let newAlerts: AlertType[] = [];
     if (tilesPlayed && sameDirection && coherentWord && adjacentPlacement) {
       newAlerts.push({
         severity: 'info',
@@ -356,7 +354,7 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
     setPlayerHasSubmitted(true);
     const copiedBoard = [...unplayedBoard];
 
-    let newAlerts: Alert[] = [];
+    let newAlerts: AlertType[] = [];
     newAlerts.push({
       severity: 'info',
       message: `Vänta, draget spelas...`

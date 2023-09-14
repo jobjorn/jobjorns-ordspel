@@ -1,11 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient, User } from '@prisma/client';
-import { allLetters } from 'data/defaults';
-import { shuffleArray } from 'services/helpers';
 import sendgrid from '@sendgrid/mail';
 import he from 'he';
 import { GameListData } from 'types/types';
 import { getUser } from 'services/authorization';
+import { shuffleStartLetters } from 'services/game';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -21,7 +20,7 @@ export const startGame = async (
 
   let invitations: string[] = [];
 
-  let letters: string = shuffleArray(allLetters()).join();
+  let letters: string = shuffleStartLetters().join();
 
   try {
     if (emailList.length > 0) {

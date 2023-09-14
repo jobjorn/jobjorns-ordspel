@@ -617,8 +617,27 @@ const games = async (
   } else if (req.method === 'GET') {
     return new Promise((resolve) => {
       getGame(parseInt(req.query.id as string, 10))
-        .then((result) => {
-          res.status(200).json(result);
+        .then(async (result) => {
+          let newResult;
+          if (result && result.data) {
+            // if all players have played and the turn hasn't ended, run turn end
+            let playersCount =
+              result.data.users.length + result.data.invitations.length;
+            let playedCount = result.data.turns[0].moves.length;
+            if (playersCount == playedCount && playersCount > 0) {
+              let turnEndResult = await runTurnEnd(result.data.id);
+              console.log('här har vi data', result.data.id, turnEndResult);
+              if (turnEndResult.turn.response == 'Ny tur sparades') {
+                newResult = await getGame(parseInt(req.query.id as string, 10));
+              }
+            }
+          }
+
+          if (newResult) {
+            res.status(200).json(newResult);
+          } else {
+            res.status(200).json(result);
+          }
           resolve();
         })
         .catch((error) => {
