@@ -37,3 +37,5 @@ yarn-error.log*
 
 todo
 todo.md
+
+dist/
