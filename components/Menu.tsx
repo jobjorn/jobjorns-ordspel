@@ -27,7 +27,7 @@ import { useUser } from '@auth0/nextjs-auth0/client';
 import Link from 'next/link';
 import { Stack } from '@mui/system';
 import { gravatar } from 'services/helpers';
-import { AddBox, Gavel, ViewList } from '@mui/icons-material';
+import { AddBox, Gavel, Settings, ViewList } from '@mui/icons-material';
 
 export const Menu: React.FC<{}> = () => {
   const [drawer, setDrawer] = useState(false);
@@ -90,6 +90,11 @@ const ToolbarList: React.FC<{}> = () => {
               Regler
             </Button>
           </Link>
+          <Link href="/settings" passHref>
+            <Button key={'Inställningar'} sx={{ color: 'white' }}>
+              <Settings />
+            </Button>
+          </Link>
           <Divider orientation="vertical" sx={{ height: 'auto' }} />
           <Link href="/api/auth/logout" passHref>
             <Button key={'Logga ut'} sx={{ color: 'white' }}>
@@ -148,6 +153,15 @@ const DrawerList: React.FC<{}> = () => {
                 <Gavel />
               </ListItemIcon>
               <ListItemText primary={'Regler'} />
+            </ListItemButton>
+          </Link>
+
+          <Link href="/settings" passHref>
+            <ListItemButton key={'Inställningar'}>
+              <ListItemIcon>
+                <Settings />
+              </ListItemIcon>
+              <ListItemText primary={'Inställningar'} />
             </ListItemButton>
           </Link>
 

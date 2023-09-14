@@ -362,3 +362,34 @@ export const updateUser = async (user: User): Promise<ResponseType<User>> => {
     };
   }
 };
+
+export const getTurnOffReminders = async (
+  key: string
+): Promise<ResponseType<User>> => {
+  const defaultHeaders = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json;charset=UTF-8'
+  };
+  const url = '/api/user/turnoffreminders';
+  const options = {
+    method: 'PATCH',
+    headers: defaultHeaders,
+    body: JSON.stringify({ key })
+  };
+
+  try {
+    const updatedUser = await (await fetch(url, options)).json();
+    console.log('updatedUser', updatedUser);
+
+    if (updatedUser && updatedUser.name) {
+      return { success: true as const, data: updatedUser };
+    } else {
+      throw new Error('Något gick fel');
+    }
+  } catch (error) {
+    return {
+      success: false as const,
+      error: error as Error
+    };
+  }
+};

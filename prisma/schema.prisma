@@ -17,6 +17,9 @@ model User {
   games             UsersOnGames[]
   startedGames      Game[]
   moves             Move[]
+  receiveReminders  Boolean        @default(true)
+  stopRemindersHash String         @unique @default(uuid())
+  lastReminded      DateTime?
 
   @@map("users")
 }

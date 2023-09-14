@@ -1,40 +1,37 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { PrismaClient, User } from '@prisma/client';
-import { getUser } from 'services/authorization';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const updateUser = async (user: User) => {
+const updateRemindersSetting = async (key: string) => {
   try {
+    if (!key) {
+      throw new Error('No key provided.');
+    }
     const updatedUser = await prisma.user.update({
-      where: { sub: user.sub },
+      where: { stopRemindersHash: key },
       data: {
-        settingVisibility: user.settingVisibility,
-        receiveReminders: user.receiveReminders
+        receiveReminders: false
       }
     });
 
     return updatedUser;
   } catch (error) {
-    throw new Error(error as string);
+    console.log(error);
+
+    return 'Något gick fel, försök igen eller kontakta utvecklaren.';
   }
 };
 
-const users = async (
+const turnOffReminders = async (
   req: NextApiRequest,
   res: NextApiResponse
 ): Promise<void> => {
   if (req.method === 'PATCH') {
     return new Promise(async (resolve) => {
-      const loggedInUser = await getUser(req, res);
-      const user: User = req.body.user;
-      if (loggedInUser?.sub !== user.sub) {
-        res.status(401).end('Unauthorized.');
-        resolve();
-        return;
-      }
+      const key: string = req.body.key;
 
-      updateUser(user)
+      updateRemindersSetting(key)
         .then((result) => {
           res.status(200).json(result);
           resolve();
@@ -52,4 +49,4 @@ const users = async (
   }
 };
 
-export default users;
+export default turnOffReminders;
