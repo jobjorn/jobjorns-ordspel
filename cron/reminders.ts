@@ -35,12 +35,17 @@ if (process.env.SENDGRID_API_KEY) {
 }
 
 const sendReminderEmail = async (user: UserWithGamesAndMoves) => {
-  console.log('sending reminder to', user.name);
+  let invitesText = '';
+  let yourTurnText = '';
+  let otherTurnText = '';
+  let invitesHtml = '';
+  let yourTurnHtml = '';
+  let otherTurnHtml = '';
 
-  let gamesListText = '';
-  let gamesListHtml = '';
   let hasInvites = 0;
   let hasYourTurn = 0;
+  let hasOtherTurn = 0;
+
   user.games.forEach((game) => {
     let playersList = '';
     game.game.users.forEach((player) => {
@@ -55,17 +60,35 @@ const sendReminderEmail = async (user: UserWithGamesAndMoves) => {
 
     if (game.status === 'INVITED') {
       hasInvites++;
-      gamesListText += `📫 Inbjudan till att spela med ${playersList}\n`;
-      gamesListHtml += `📫 Inbjudan till att spela med <a href="https://www.ordbjorn.se/">${playersList}</a><br>`;
+      invitesText += `📫 Inbjudan till att spela med ${playersList}\n`;
+      invitesHtml += `📫 Inbjudan till att spela med <a href="https://www.ordbjorn.se/">${playersList}</a><br>`;
     } else if (game.status === 'YOURTURN') {
       hasYourTurn++;
-      gamesListText += `🟢 Din tur i spel med ${playersList}\n`;
-      gamesListHtml += `🟢 Din tur i spel med <a href="https://www.ordbjorn.se/game/${game.gameId}">${playersList}</a><br>`;
+      yourTurnText += `🟢 Din tur i spel med ${playersList}\n`;
+      yourTurnHtml += `🟢 Din tur i spel med <a href="https://www.ordbjorn.se/game/${game.gameId}">${playersList}</a><br>`;
     } else if (game.status === 'OTHERTURN') {
-      gamesListText += `🔴 Väntar i spel med ${playersList}\n`;
-      gamesListHtml += `🔴 Väntar i spel med <a href="https://www.ordbjorn.se/game/${game.gameId}">${playersList}</a><br>`;
+      hasOtherTurn++;
+      otherTurnText += `🔴 Väntar i spel med ${playersList}\n`;
+      otherTurnHtml += `🔴 Väntar i spel med <a href="https://www.ordbjorn.se/game/${game.gameId}">${playersList}</a><br>`;
     }
   });
+
+  if (hasInvites > 0) {
+    invitesText = 'Väntande inbjudningar:\n\n' + invitesText + '\n';
+    invitesHtml =
+      '<strong>Väntande inbjudningar:</strong><br><br>' + invitesHtml + '<br>';
+  }
+  if (hasYourTurn > 0) {
+    yourTurnText = 'Din tur:\n\n' + yourTurnText + '\n';
+    yourTurnHtml = '<strong>Din tur:</strong><br><br>' + yourTurnHtml + '<br>';
+  }
+  if (hasOtherTurn > 0) {
+    otherTurnText = 'Väntar på andra spelare:\n\n' + otherTurnText + '\n';
+    otherTurnHtml =
+      '<strong>Väntar på andra spelare:</strong><br><br>' +
+      otherTurnHtml +
+      '<br>';
+  }
 
   let titleText = '';
   let openingText = '';
@@ -135,8 +158,9 @@ const sendReminderEmail = async (user: UserWithGamesAndMoves) => {
         'Hej!\n\n' +
         openingText +
         '\n\n' +
-        gamesListText +
-        '\n' +
+        invitesText +
+        yourTurnText +
+        otherTurnText +
         toggleText +
         '\n\n' +
         'Allt gott,\nJobj&ouml;rn',
@@ -144,15 +168,17 @@ const sendReminderEmail = async (user: UserWithGamesAndMoves) => {
         'Hej!<br><br>' +
         openingText +
         '<br><br>' +
-        gamesListHtml +
-        '<br>' +
+        invitesHtml +
+        yourTurnHtml +
+        otherTurnHtml +
         toggleHtml +
         '<br><br>' +
         'Allt gott,<br>Jobj&ouml;rn'
     };
     try {
       await sendgrid.send(message);
-
+      console.log(message.html);
+      /*
       await prisma.user.update({
         where: {
           sub: user.sub
@@ -161,6 +187,7 @@ const sendReminderEmail = async (user: UserWithGamesAndMoves) => {
           lastReminded: new Date()
         }
       });
+      */
     } catch (error) {
       console.error(error);
     }
@@ -196,31 +223,35 @@ const generateReminders = async () => {
   });
   if (userList) {
     userList.forEach((user) => {
-      let latestMove = user.moves.reduce((prev, current) => {
-        return prev.playedTime > current.playedTime ? prev : current;
-      });
+      let latestMove = user.moves.reduce(
+        (prev, current) => {
+          return prev.playedTime > current.playedTime ? prev : current;
+        },
+        { playedTime: new Date('2023-04-01T00:00:00.000Z') }
+      );
 
       // filter games where status is YOURTURN or INVITED
       let gamesList = user.games.filter((game) => {
         return game.status === 'YOURTURN' || game.status === 'INVITED';
       });
 
-      console.log(user.name, latestMove.playedTime);
-      let lastReminded = user.lastReminded || '2023-04-01T00:00:00.000Z';
+      let lastReminded =
+        user.lastReminded || new Date('2023-04-01T00:00:00.000Z');
       let latestMovePlayedTime =
-        latestMove.playedTime || '2023-04-01T00:00:00.000Z';
+        latestMove.playedTime || new Date('2023-04-01T00:00:00.000Z');
 
       const now = new Date();
-      const latestMoveDate = new Date(latestMovePlayedTime);
-      const lastRemindedDate = new Date(lastReminded);
       const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
 
       if (
-        latestMoveDate < sevenDaysAgo &&
-        lastRemindedDate < sevenDaysAgo &&
+        latestMovePlayedTime < sevenDaysAgo &&
+        lastReminded < sevenDaysAgo &&
         gamesList.length > 0
       ) {
+        console.log('sending reminder to', user.name);
         sendReminderEmail(user);
+      } else {
+        console.log('NOT sending reminder to', user.name);
       }
     });
   } else {
