@@ -623,7 +623,7 @@ const games = async (
             // if all players have played and the turn hasn't ended, run turn end
             let playersCount =
               result.data.users.length + result.data.invitations.length;
-            let playedCount = result.data.turns[0].moves.length;
+            let playedCount = result.data.turns[0]?.moves.length || 0;
             if (playersCount == playedCount && playersCount > 0) {
               let turnEndResult = await runTurnEnd(result.data.id);
               console.log('här har vi data', result.data.id, turnEndResult);
