@@ -618,6 +618,7 @@ const games = async (
     return new Promise((resolve) => {
       getGame(parseInt(req.query.id as string, 10))
         .then(async (result) => {
+          /*
           let newResult;
           if (result && result.data) {
             // if all players have played and the turn hasn't ended, run turn end
@@ -638,6 +639,8 @@ const games = async (
           } else {
             res.status(200).json(result);
           }
+          */
+          res.status(200).json(result);
           resolve();
         })
         .catch((error) => {
