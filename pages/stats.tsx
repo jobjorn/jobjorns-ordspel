@@ -105,7 +105,6 @@ export const StatsPage: NextPage<{}> = () => {
   const fetchStats = async () => {
     let newStats = await getStats();
 
-    console.log('ny statistik', newStats);
     if (newStats.success && newStats.data) {
       setStats(newStats.data);
     }
@@ -144,8 +143,6 @@ export const StatsPage: NextPage<{}> = () => {
       setStatsData(newStatsData);
     }
   }, [stats]);
-
-  console.log(stats);
 
   if (isLoading || !user || !stats || !statsData) {
     return <Loading />;
