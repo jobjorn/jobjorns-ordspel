@@ -177,8 +177,7 @@ const sendReminderEmail = async (user: UserWithGamesAndMoves) => {
     };
     try {
       await sendgrid.send(message);
-      console.log(message.html);
-      /*
+
       await prisma.user.update({
         where: {
           sub: user.sub
@@ -187,7 +186,6 @@ const sendReminderEmail = async (user: UserWithGamesAndMoves) => {
           lastReminded: new Date()
         }
       });
-      */
     } catch (error) {
       console.error(error);
     }
