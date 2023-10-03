@@ -12,7 +12,9 @@ import {
 import Ably from 'ably';
 import { Tile } from 'types/types';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['warn', 'error']
+});
 
 const getGame = async (gameId: number) => {
   try {
