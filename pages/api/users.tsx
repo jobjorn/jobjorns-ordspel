@@ -9,7 +9,9 @@ interface User {
   email: string;
 }
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['warn', 'error']
+});
 
 const addUser = async (user: User) => {
   try {

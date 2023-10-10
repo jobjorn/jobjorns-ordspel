@@ -41,7 +41,6 @@ const StopRemindersPage: NextPage<{}> = () => {
           }
           setLoading(false);
         } else {
-          console.log(turnOffResult);
           setAlert({
             severity: 'error',
             message:

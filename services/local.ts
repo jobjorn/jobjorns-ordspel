@@ -379,7 +379,6 @@ export const getTurnOffReminders = async (
 
   try {
     const updatedUser = await (await fetch(url, options)).json();
-    console.log('updatedUser', updatedUser);
 
     if (updatedUser && updatedUser.name) {
       return { success: true as const, data: updatedUser };

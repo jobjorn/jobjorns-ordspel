@@ -1,7 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['warn', 'error']
+});
 
 const updateRemindersSetting = async (key: string) => {
   try {
@@ -17,8 +19,6 @@ const updateRemindersSetting = async (key: string) => {
 
     return updatedUser;
   } catch (error) {
-    console.log(error);
-
     return 'Något gick fel, försök igen eller kontakta utvecklaren.';
   }
 };

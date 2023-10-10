@@ -12,7 +12,9 @@ import {
 import Ably from 'ably';
 import { Tile } from 'types/types';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['warn', 'error']
+});
 
 const getGame = async (gameId: number) => {
   try {
@@ -162,7 +164,7 @@ const submitMove = async (
     });
 
     if (createMove !== null) {
-      let updateUserOnGame = await prisma.usersOnGames.update({
+      await prisma.usersOnGames.update({
         where: {
           userSub_gameId: {
             gameId: gameId,
@@ -174,7 +176,6 @@ const submitMove = async (
           statusTime: new Date()
         }
       });
-      console.log(updateUserOnGame);
 
       let turnEndResult = await runTurnEnd(gameId);
 
@@ -283,9 +284,7 @@ export const runTurnEnd = async (gameId: number) => {
         );
         if (turnResult.success && updateMove.success) {
           if (gameEnded) {
-            let gameEndResult = await endGame(gameId);
-
-            console.log(gameEndResult);
+            await endGame(gameId);
           }
 
           return {
@@ -367,7 +366,7 @@ const submitTurn = async (
       }
     });
     if (updateResult !== null) {
-      let updateUserOnGame = await prisma.usersOnGames.updateMany({
+      await prisma.usersOnGames.updateMany({
         where: {
           gameId: gameId
         },
@@ -376,7 +375,6 @@ const submitTurn = async (
           statusTime: new Date()
         }
       });
-      console.log(updateUserOnGame);
 
       return { success: true as const, response: 'Ny tur sparades' };
     } else {
@@ -403,7 +401,7 @@ const endGame = async (gameId: number) => {
       }
     });
     if (endGameResult !== null) {
-      let updateUserOnGame = await prisma.usersOnGames.updateMany({
+      await prisma.usersOnGames.updateMany({
         where: {
           gameId: gameId
         },
@@ -412,7 +410,6 @@ const endGame = async (gameId: number) => {
           statusTime: new Date()
         }
       });
-      console.log(updateUserOnGame);
 
       return { success: true as const, response: 'Spelet avslutades' };
     } else {
@@ -627,7 +624,6 @@ const games = async (
             let playedCount = result.data.turns[0]?.moves.length || 0;
             if (playersCount == playedCount && playersCount > 0) {
               let turnEndResult = await runTurnEnd(result.data.id);
-              console.log('här har vi data', result.data.id, turnEndResult);
               if (turnEndResult.turn.response == 'Ny tur sparades') {
                 newResult = await getGame(parseInt(req.query.id as string, 10));
               }

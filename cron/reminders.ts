@@ -244,12 +244,35 @@ const generateReminders = async () => {
       if (
         latestMovePlayedTime < sevenDaysAgo &&
         lastReminded < sevenDaysAgo &&
-        gamesList.length > 0
+        gamesList.length > 0 &&
+        user.receiveReminders === true
       ) {
-        console.log('sending reminder to', user.name);
+        console.log(
+          '📧 ',
+          user.name,
+          'recieveReminders:',
+          user.receiveReminders,
+          'latestMovePlayedTime:',
+          latestMovePlayedTime,
+          'lastReminded:',
+          lastReminded,
+          'gamesList:',
+          gamesList.length
+        );
         sendReminderEmail(user);
       } else {
-        console.log('NOT sending reminder to', user.name);
+        console.log(
+          '🛑 ',
+          user.name,
+          'recieveReminders:',
+          user.receiveReminders,
+          'latestMovePlayedTime:',
+          latestMovePlayedTime,
+          'lastReminded:',
+          lastReminded,
+          'gamesList:',
+          gamesList.length
+        );
       }
     });
   } else {

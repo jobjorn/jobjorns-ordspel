@@ -92,8 +92,6 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
       return () => {
         channel.unsubscribe();
       };
-    } else {
-      console.log({ ablyApiKey });
     }
   }, [fetchGame, game.id]);
 

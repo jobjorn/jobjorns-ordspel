@@ -2,7 +2,9 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient, User } from '@prisma/client';
 import { getUser } from 'services/authorization';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['warn', 'error']
+});
 
 const updateUser = async (user: User) => {
   try {
