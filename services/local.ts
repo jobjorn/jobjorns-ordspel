@@ -289,7 +289,30 @@ export const dismissRefusal = async (gameId: number, userSub: string) => {
   const options = {
     method: 'POST',
     headers: defaultHeaders,
-    body: JSON.stringify({ variant: 'dismiss', userSub })
+    body: JSON.stringify({ variant: 'dismissRefusal', userSub })
+  };
+
+  try {
+    const dismissResult = await (await fetch(url, options)).json();
+
+    return { dismiss: dismissResult };
+  } catch (error) {
+    return {
+      dismiss: { success: false, response: error }
+    };
+  }
+};
+
+export const dismissFinished = async (gameId: number, userSub: string) => {
+  const defaultHeaders = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json;charset=UTF-8'
+  };
+  const url = '/api/games/' + gameId;
+  const options = {
+    method: 'POST',
+    headers: defaultHeaders,
+    body: JSON.stringify({ variant: 'dismissFinished', userSub })
   };
 
   try {

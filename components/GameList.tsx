@@ -15,6 +15,7 @@ import { GameInviteListItem } from './GameListInvite';
 import { GameListRefusal } from './GameListRefusal';
 import Head from 'next/head';
 import { faviconString } from 'services/helpers';
+import { GameListFinished } from './GameListFinished';
 
 export const GameList: React.FC<{}> = () => {
   const [loading, setLoading] = useState(true);
@@ -24,6 +25,8 @@ export const GameList: React.FC<{}> = () => {
   const [gamesListRefusals, setGamesListRefusals] = useState<GameListData[]>(
     []
   );
+  const [gamesListFinishedNotDismissed, setGamesListFinishedNotDismissed] =
+    useState<GameListData[]>([]);
   const [gamesListWaiting, setGamesListWaiting] = useState<GameListData[]>([]);
   const [gamesListReady, setGamesListReady] = useState<GameListData[]>([]);
   const [gamesListFinished, setGamesListFinished] = useState<GameListData[]>(
@@ -74,13 +77,16 @@ export const GameList: React.FC<{}> = () => {
   useEffect(() => {
     if (user && user.sub && gamesList.length > 0) {
       let newGamesListInvites: GameListData[] = [];
+      let newGamesListFinishedNotDismissed: GameListData[] = [];
       let newGamesListRefusals: GameListData[] = [];
       let newGamesListReady: GameListData[] = [];
       let newGamesListWaiting: GameListData[] = [];
       let newGamesListFinished: GameListData[] = [];
 
       gamesList.map((game) => {
-        if (game.status == 'FINISHED') {
+        if (game.status == 'FINISHED' && game.finishedDismissed == false) {
+          newGamesListFinishedNotDismissed.push(game);
+        } else if (game.status == 'FINISHED') {
           newGamesListFinished.push(game);
         } else if (game.status == 'INVITED') {
           newGamesListInvites.push(game);
@@ -95,6 +101,7 @@ export const GameList: React.FC<{}> = () => {
 
       setGamesListInvites(newGamesListInvites);
       setGamesListRefusals(newGamesListRefusals);
+      setGamesListFinishedNotDismissed(newGamesListFinishedNotDismissed);
       setGamesListWaiting(newGamesListWaiting);
       setGamesListReady(newGamesListReady);
       setGamesListFinished(newGamesListFinished);
@@ -135,72 +142,99 @@ export const GameList: React.FC<{}> = () => {
             )}
           </Head>
         )}
+
         {gamesListInvites.length > 0 && (
-          <Typography variant="h4" sx={{}}>
-            Inbjudningar
-          </Typography>
+          <>
+            <Typography variant="h4" sx={{}}>
+              Inbjudningar
+            </Typography>
+            <List>
+              {gamesListInvites.map((game) => (
+                <GameInviteListItem
+                  key={game.game.id}
+                  game={game.game}
+                  removeGameFromList={removeGameFromList}
+                />
+              ))}
+            </List>
+          </>
         )}
-        <List>
-          {gamesListInvites.map((game) => (
-            <GameInviteListItem
-              key={game.game.id}
-              game={game.game}
-              removeGameFromList={removeGameFromList}
-            />
-          ))}
-        </List>
 
         {gamesListRefusals.length > 0 && (
-          <Typography variant="h4" sx={{}}>
-            Avvisade inbjudningar
-          </Typography>
+          <>
+            <Typography variant="h4" sx={{}}>
+              Avvisade inbjudningar
+            </Typography>
+            <List>
+              {gamesListRefusals.map((game) => (
+                <GameListRefusal
+                  key={game.game.id}
+                  game={game.game}
+                  removeGameFromList={removeGameFromList}
+                />
+              ))}
+            </List>
+          </>
         )}
-        <List>
-          {gamesListRefusals.map((game) => (
-            <GameListRefusal
-              key={game.game.id}
-              game={game.game}
-              removeGameFromList={removeGameFromList}
-            />
-          ))}
-        </List>
+
+        {gamesListFinishedNotDismissed.length > 0 && (
+          <>
+            <Typography variant="h4" sx={{}}>
+              Nyligen avslutade spel
+            </Typography>
+            <List>
+              {gamesListFinishedNotDismissed.map((game) => (
+                <GameListFinished
+                  key={game.game.id}
+                  game={game.game}
+                  removeGameFromList={removeGameFromList}
+                />
+              ))}
+            </List>
+          </>
+        )}
 
         {(gamesListReady.length > 0 || gamesListWaiting.length > 0) && (
-          <Typography variant="h4" sx={{}}>
-            Pågående spel
-          </Typography>
+          <>
+            <Typography variant="h4" sx={{}}>
+              Pågående spel
+            </Typography>
+
+            <List>
+              {gamesListReady.length > 0 && (
+                <ListSubheader style={{ zIndex: 200 }}>
+                  Väntar på ditt drag
+                </ListSubheader>
+              )}
+
+              {gamesListReady.map((game) => (
+                <GameListListItem key={game.game.id} game={game.game} />
+              ))}
+
+              {gamesListWaiting.length > 0 && (
+                <ListSubheader style={{ zIndex: 200 }}>
+                  Väntar på andras drag
+                </ListSubheader>
+              )}
+              {gamesListWaiting.map((game) => (
+                <GameListListItem key={game.game.id} game={game.game} />
+              ))}
+            </List>
+          </>
         )}
-        <List>
-          {gamesListReady.length > 0 && (
-            <ListSubheader style={{ zIndex: 200 }}>
-              Väntar på ditt drag
-            </ListSubheader>
-          )}
-
-          {gamesListReady.map((game) => (
-            <GameListListItem key={game.game.id} game={game.game} />
-          ))}
-
-          {gamesListWaiting.length > 0 && (
-            <ListSubheader style={{ zIndex: 200 }}>
-              Väntar på andras drag
-            </ListSubheader>
-          )}
-          {gamesListWaiting.map((game) => (
-            <GameListListItem key={game.game.id} game={game.game} />
-          ))}
-        </List>
 
         {gamesListFinished.length > 0 && (
-          <Typography variant="h4" sx={{}}>
-            Avslutade spel
-          </Typography>
+          <>
+            <Typography variant="h4" sx={{}}>
+              Avslutade spel
+            </Typography>
+            <List>
+              {gamesListFinished.map((game) => (
+                <GameListListItem key={game.game.id} game={game.game} />
+              ))}
+            </List>
+          </>
         )}
-        <List>
-          {gamesListFinished.map((game) => (
-            <GameListListItem key={game.game.id} game={game.game} />
-          ))}
-        </List>
       </Container>
     );
   } else {

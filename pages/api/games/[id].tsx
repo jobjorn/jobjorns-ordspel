@@ -97,6 +97,60 @@ const checkInSAOL = async (board: Tile[][]) => {
   }
 };
 
+const updatePoints = async (gameId: number) => {
+  // TODO: update points for all players
+  // sum of playedPoints in move per player with the gameId
+
+  try {
+    const newPoints: { userSub: string; total_points: bigint }[] =
+      await prisma.$queryRaw`
+      SELECT
+        "Move"."userSub",
+        SUM("Move"."playedPoints") AS total_points
+      FROM
+        "Turn"
+      JOIN
+        "Move" ON "Turn".id = "Move"."turnId"
+      WHERE
+        "Turn"."gameId" = ${gameId}
+      GROUP BY
+        "Move"."userSub";
+    `;
+
+    console.log(newPoints);
+    if (newPoints.length > 0) {
+      newPoints.map(async (newPoint) => {
+        let updatePoint = await prisma.usersOnGames.update({
+          where: {
+            userSub_gameId: {
+              gameId: gameId,
+              userSub: newPoint.userSub
+            }
+          },
+          data: {
+            points: Number(newPoint.total_points)
+          }
+        });
+        console.log(updatePoint);
+      });
+    }
+
+    if (newPoints === null) {
+      return { success: false as const, response: 'Inga poäng uppdaterades' };
+    } else {
+      return {
+        success: true as const,
+        response: newPoints
+      };
+    }
+  } catch (error) {
+    return {
+      success: false as const,
+      response: 'Det blev ett error: ' + error
+    };
+  }
+};
+
 const submitMove = async (
   gameId: number,
   userSub: string,
@@ -246,6 +300,11 @@ export const runTurnEnd = async (gameId: number) => {
       let updateMove = await updateWinningMove(winningMove.id);
       if (updateMove.success == false) {
         throw new Error(updateMove.response);
+      }
+
+      let updatedPoints = await updatePoints(gameId);
+      if (updatedPoints.success == false) {
+        throw new Error(updatedPoints.response);
       }
 
       let letters = game.data.letters.split(',');
@@ -543,6 +602,34 @@ const dismissRefusal = async (gameId: number, userSub: string) => {
   }
 };
 
+const dismissFinished = async (gameId: number, userSub: string) => {
+  try {
+    const updateResult = await prisma.usersOnGames.update({
+      data: {
+        finishedDismissed: true
+      },
+      where: {
+        userSub_gameId: {
+          userSub,
+          gameId
+        }
+      }
+    });
+    if (updateResult !== null) {
+      return { success: true as const, response: 'Spelet arkiverades' };
+    } else {
+      throw new Error(
+        'Något gick fel i arkiveringen av det avslutade spelet, deleteResult var null'
+      );
+    }
+  } catch (error) {
+    return {
+      success: false as const,
+      response: 'Det blev ett error: ' + error
+    };
+  }
+};
+
 interface PostRequestBodyMove {
   variant: 'move';
   userSub: string;
@@ -677,9 +764,24 @@ const games = async (
           await prisma.$disconnect();
         });
     });
-  } else if (req.method === 'POST' && req.body.variant == 'dismiss') {
+  } else if (req.method === 'POST' && req.body.variant == 'dismissRefusal') {
     return new Promise((resolve) => {
       dismissRefusal(parseInt(req.query.id as string, 10), req.body.userSub)
+        .then((result) => {
+          res.status(200).json(result);
+          resolve();
+        })
+        .catch((error) => {
+          res.status(500).end(error);
+          resolve();
+        })
+        .finally(async () => {
+          await prisma.$disconnect();
+        });
+    });
+  } else if (req.method === 'POST' && req.body.variant == 'dismissFinished') {
+    return new Promise((resolve) => {
+      dismissFinished(parseInt(req.query.id as string, 10), req.body.userSub)
         .then((result) => {
           res.status(200).json(result);
           resolve();
