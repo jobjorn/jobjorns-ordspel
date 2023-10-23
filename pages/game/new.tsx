@@ -4,7 +4,6 @@ import { Menu } from 'components/Menu';
 import { useUser, withPageAuthRequired } from '@auth0/nextjs-auth0/client';
 import { Footer } from 'components/Footer';
 import { listUsers, startGame } from 'services/local';
-import { User } from '@prisma/client';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import {
@@ -30,18 +29,19 @@ import OutlinedInput from '@mui/material/OutlinedInput';
 import InputAdornment from '@mui/material/InputAdornment';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import { z } from 'zod';
+import { UserListData } from 'types/types';
 
 const NewGamePage: NextPage<{}> = () => {
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<User[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserListData[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<UserListData[]>([]);
   const [email, setEmail] = useState<string>('');
   const [emailList, setEmailList] = useState<string[]>([]);
   const [emailError, setEmailError] = useState<boolean>(false);
 
   const { user } = useUser();
 
-  const toggleUser = (user: User) => {
+  const toggleUser = (user: UserListData) => {
     let newSelectedUsers = [...selectedUsers];
 
     const index = newSelectedUsers.indexOf(user);
@@ -128,9 +128,11 @@ const NewGamePage: NextPage<{}> = () => {
                       selected={selectedUsers.indexOf(listUser) !== -1}
                     >
                       <ListItemAvatar>
-                        <Avatar
-                          src={listUser.picture || gravatar(listUser.email)}
-                        />
+                        {listUser.picture ? (
+                          <Avatar src={listUser.picture} />
+                        ) : (
+                          <Avatar>{listUser.name[0]}</Avatar>
+                        )}
                       </ListItemAvatar>
                       <ListItemText primary={listUser.name} />
                     </ListItemButton>

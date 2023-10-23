@@ -1,7 +1,14 @@
-import { UserProfile } from '@auth0/nextjs-auth0/client';
 import { Invitation, User } from '@prisma/client';
 import router from 'next/router';
-import { ResponseType, GameWithEverything, GameListData } from 'types/types';
+import {
+  ResponseType,
+  GameWithEverything,
+  GameListData,
+  UserListData
+} from 'types/types';
+
+/*
+används ej längre, addUser körs från Auth0 numera
 
 export const addUser = (user: UserProfile) => {
   const defaultHeaders = {
@@ -34,6 +41,7 @@ export const addUser = (user: UserProfile) => {
       console.error(error);
     });
 };
+*/
 
 export const getUser = (email: string): Promise<ResponseType<User>> => {
   const defaultHeaders = {
@@ -67,7 +75,7 @@ export const getUser = (email: string): Promise<ResponseType<User>> => {
     });
 };
 
-export const listUsers = (): Promise<ResponseType<User[]>> => {
+export const listUsers = (): Promise<ResponseType<UserListData[]>> => {
   const defaultHeaders = {
     Accept: 'application/json',
     'Content-Type': 'application/json;charset=UTF-8'
@@ -99,7 +107,7 @@ export const listUsers = (): Promise<ResponseType<User[]>> => {
     });
 };
 
-export const startGame = (players: User[], emailList: string[]) => {
+export const startGame = (players: UserListData[], emailList: string[]) => {
   const defaultHeaders = {
     Accept: 'application/json',
     'Content-Type': 'application/json;charset=UTF-8'

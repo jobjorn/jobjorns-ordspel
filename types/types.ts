@@ -65,3 +65,11 @@ export type GameListData = Prisma.UsersOnGamesGetPayload<{
     };
   };
 }>;
+
+export type UserListData = Prisma.UserGetPayload<{
+  select: {
+    name: true;
+    picture: true;
+    sub: true;
+  };
+}>;

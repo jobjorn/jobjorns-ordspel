@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient, User } from '@prisma/client';
 import sendgrid from '@sendgrid/mail';
 import he from 'he';
-import { GameListData } from 'types/types';
+import { GameListData, UserListData } from 'types/types';
 import { getUser } from 'services/authorization';
 import { shuffleStartLetters } from 'services/game';
 
@@ -12,7 +12,7 @@ const prisma = new PrismaClient({
 
 export const startGame = async (
   starter: User['sub'],
-  players: User[],
+  players: UserListData[],
   emailList: string[]
 ) => {
   let newPlayers = players.map((player) => player.sub);
@@ -163,7 +163,7 @@ const listGames = async (userSub: string) => {
 
 interface PostRequestBody {
   starter: User;
-  players: User[];
+  players: UserListData[];
   emailList: string[];
 }
 
