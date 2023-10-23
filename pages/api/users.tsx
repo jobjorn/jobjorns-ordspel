@@ -2,13 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
 import { startGame } from './games';
 import { getUser } from 'services/authorization';
-
-interface UserFromAuth0Input {
-  sub: string;
-  name: string;
-  picture: string;
-  email: string;
-}
+import { UserFromAuth0Input, UserFromAuth0InputSchema } from 'types/types';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -77,14 +71,13 @@ const listUsers = async () => {
 const users = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     // OBS: denna kallas tidvis från Auth0
-    const { sub, name, picture, email }: UserFromAuth0Input = req.body;
     try {
-      const result = await addUser({
-        sub,
-        name,
-        picture,
-        email
-      });
+      const parsedInputUser = UserFromAuth0InputSchema.safeParse(req.body);
+      if (!parsedInputUser.success) {
+        throw new Error(parsedInputUser.error.message);
+      }
+
+      const result = await addUser(parsedInputUser.data);
       res.status(200).json(result);
     } catch (error) {
       res.status(500).end(error);
