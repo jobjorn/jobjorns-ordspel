@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
+import { getUser } from 'services/authorization';
+import { StatsData } from 'types/types';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -7,7 +9,7 @@ const prisma = new PrismaClient({
 
 const getStats = async () => {
   try {
-    const statsResult = await prisma.$queryRaw`
+    const statsResult: StatsData = await prisma.$queryRaw`
       WITH date_range AS (
         SELECT generate_series(
             (SELECT MIN(DATE_TRUNC('day', "playedTime")) FROM "Move"),
@@ -32,41 +34,40 @@ const getStats = async () => {
           dr.day;
     `;
 
-    if (statsResult) {
-      return {
-        message: 'Det gick bra, här är statistiken',
-        data: statsResult
-      };
-    } else {
-      return { message: 'Något gick fel i hämtandet av statistik' };
+    if (statsResult.length === 0) {
+      throw new Error('Ingen statistik hittades');
     }
+    return {
+      message: 'Det gick bra, här är statistiken',
+      data: statsResult
+    };
   } catch (error) {
     return { message: 'Det blev ett error: ' + error };
   }
 };
 
-const stats = async (
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<void> => {
+const stats = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
-    return new Promise((resolve) => {
-      getStats()
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    // endast tillåtet om man är inloggad
+    const loggedInUser = await getUser(req, res);
+    if (loggedInUser === null) {
+      res.status(401).end();
+      await prisma.$disconnect();
+      return;
+    }
+
+    try {
+      const result = await getStats();
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else {
     res.status(404).end();
   }
+
+  await prisma.$disconnect();
+  return;
 };
 
 export default stats;
