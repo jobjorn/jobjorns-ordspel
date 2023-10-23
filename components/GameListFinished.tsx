@@ -44,6 +44,7 @@ export const GameListFinished = ({
   if (game) {
     let playersList = '';
     let winner: GameListData['game']['users'][0] | undefined;
+    let dismissed = false;
     game.users.forEach((player) => {
       if (player.userSub !== user.sub) {
         if (playersList.length == 0) {
@@ -51,6 +52,9 @@ export const GameListFinished = ({
         } else {
           playersList += ', ' + player.user.name;
         }
+      }
+      if (player.userSub === user.sub) {
+        dismissed = player.finishedDismissed;
       }
       if (!winner) {
         winner = player;
@@ -117,18 +121,20 @@ export const GameListFinished = ({
                       winner?.user.name +
                       ' vann!'}
                   </Typography>
-                  <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
-                    <Button
-                      variant="contained"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        event.nativeEvent.preventDefault();
-                        handleDismissFinished();
-                      }}
-                    >
-                      Arkivera
-                    </Button>
-                  </Stack>
+                  {!dismissed && (
+                    <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
+                      <Button
+                        variant="contained"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          event.nativeEvent.preventDefault();
+                          handleDismissFinished();
+                        }}
+                      >
+                        Arkivera
+                      </Button>
+                    </Stack>
+                  )}
                 </>
               }
             />

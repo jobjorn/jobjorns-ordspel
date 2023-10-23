@@ -230,7 +230,11 @@ export const GameList: React.FC<{}> = () => {
             </Typography>
             <List>
               {gamesListFinished.map((game) => (
-                <GameListListItem key={game.game.id} game={game.game} />
+                <GameListFinished
+                  key={game.game.id}
+                  game={game.game}
+                  removeGameFromList={removeGameFromList}
+                />
               ))}
             </List>
           </>
