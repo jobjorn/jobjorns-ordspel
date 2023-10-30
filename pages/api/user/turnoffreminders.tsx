@@ -23,30 +23,22 @@ const updateRemindersSetting = async (key: string) => {
   }
 };
 
-const turnOffReminders = async (
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<void> => {
+const turnOffReminders = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'PATCH') {
-    return new Promise(async (resolve) => {
+    try {
       const key: string = req.body.key;
 
-      updateRemindersSetting(key)
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+      const result = await updateRemindersSetting(key);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else {
     res.status(404).end();
   }
+
+  await prisma.$disconnect();
+  return;
 };
 
 export default turnOffReminders;
