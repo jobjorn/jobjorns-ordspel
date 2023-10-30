@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
+import { getUser } from 'services/authorization';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -57,28 +58,31 @@ const getUpdatedInvitations = async (email: string, sub: string) => {
   }
 };
 
-const invitations = async (
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<void> => {
+const invitations = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
-    return new Promise((resolve) => {
-      getUpdatedInvitations(req.query.email as string, req.query.sub as string)
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    // endast tillåtet om man är inloggad
+    const loggedInUser = await getUser(req, res);
+    if (loggedInUser === null) {
+      res.status(401).end();
+      await prisma.$disconnect();
+      return;
+    }
+
+    try {
+      const result = await getUpdatedInvitations(
+        req.query.email as string,
+        req.query.sub as string
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else {
     res.status(404).end();
   }
+
+  await prisma.$disconnect();
+  return;
 };
 
 export default invitations;
