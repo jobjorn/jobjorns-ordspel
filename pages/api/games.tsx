@@ -167,53 +167,42 @@ interface PostRequestBody {
   emailList: string[];
 }
 
-const games = async (
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<void> => {
+const games = async (req: NextApiRequest, res: NextApiResponse) => {
+  // endast tillåtet om man är inloggad
+  const loggedInUser = await getUser(req, res);
+  if (loggedInUser === null) {
+    res.status(401).end();
+    await prisma.$disconnect();
+    return;
+  }
+
   if (req.method === 'POST') {
-    return new Promise(async (resolve) => {
-      const { players, emailList }: PostRequestBody = req.body;
+    const { players, emailList }: PostRequestBody = req.body;
+    const loggedInUserSub = loggedInUser?.sub;
 
-      const loggedInUser = await getUser(req, res);
-      const loggedInUserSub = loggedInUser?.sub;
-
-      if (!loggedInUserSub || (!players && !emailList)) {
-        res.status(400).end('Players saknas');
-        resolve();
-      } else {
-        startGame(loggedInUserSub, players, emailList)
-          .then((result) => {
-            res.status(200).json(result);
-            resolve();
-          })
-          .catch((error) => {
-            res.status(500).end(error);
-            resolve();
-          })
-          .finally(async () => {
-            await prisma.$disconnect();
-          });
+    if (!loggedInUserSub || (!players && !emailList)) {
+      res.status(400).end('Players saknas');
+    } else {
+      try {
+        const result = await startGame(loggedInUserSub, players, emailList);
+        res.status(200).json(result);
+      } catch (error) {
+        res.status(500).end(error);
       }
-    });
+    }
   } else if (req.method === 'GET') {
-    return new Promise((resolve) => {
-      listGames(req.query.usersub as string)
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    try {
+      const result = await listGames(req.query.usersub as string);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else {
     res.status(404).end();
   }
+
+  await prisma.$disconnect();
+  return;
 };
 
 export default games;
