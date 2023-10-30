@@ -11,6 +11,7 @@ import {
 } from 'services/game';
 import Ably from 'ably';
 import { Tile } from 'types/types';
+import { getUser } from 'services/authorization';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -644,159 +645,100 @@ interface PostRequestBodyTurn {
   latestWord: string;
 }
 
-const games = async (
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<void> => {
+const games = async (req: NextApiRequest, res: NextApiResponse) => {
+  // endast tillåtet om man är inloggad
+  const loggedInUser = await getUser(req, res);
+  if (loggedInUser === null) {
+    res.status(401).end();
+    await prisma.$disconnect();
+    return;
+  }
+
   if (req.method === 'POST' && req.body.variant == 'move') {
-    return new Promise((resolve) => {
+    try {
       const {
         userSub,
         turnNumber,
         playedWord,
         playedBoard
       }: PostRequestBodyMove = req.body;
-
-      submitMove(
+      const result = await submitMove(
         parseInt(req.query.id as string, 10),
         userSub,
         turnNumber,
         playedWord,
         playedBoard
-      )
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else if (req.method === 'POST' && req.body.variant == 'turn') {
-    return new Promise((resolve) => {
+    try {
       const { letters, board, latestWord }: PostRequestBodyTurn = req.body;
-
-      submitTurn(
+      const result = await submitTurn(
         parseInt(req.query.id as string, 10),
         letters,
         board,
         latestWord
-      )
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else if (req.method === 'GET') {
-    return new Promise((resolve) => {
-      getGame(parseInt(req.query.id as string, 10))
-        .then(async (result) => {
-          /*
-          let newResult;
-          if (result && result.data) {
-            // if all players have played and the turn hasn't ended, run turn end
-            let playersCount =
-              result.data.users.length + result.data.invitations.length;
-            let playedCount = result.data.turns[0]?.moves.length || 0;
-            if (playersCount == playedCount && playersCount > 0) {
-              let turnEndResult = await runTurnEnd(result.data.id);
-              if (turnEndResult.turn.response == 'Ny tur sparades') {
-                newResult = await getGame(parseInt(req.query.id as string, 10));
-              }
-            }
-          }
-
-          if (newResult) {
-            res.status(200).json(newResult);
-          } else {
-            res.status(200).json(result);
-          }
-          */
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    try {
+      const result = await getGame(parseInt(req.query.id as string, 10));
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else if (req.method === 'POST' && req.body.variant == 'accept') {
-    return new Promise((resolve) => {
-      acceptInvite(parseInt(req.query.id as string, 10), req.body.userSub)
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    try {
+      const result = await acceptInvite(
+        parseInt(req.query.id as string, 10),
+        req.body.userSub
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else if (req.method === 'POST' && req.body.variant == 'decline') {
-    return new Promise((resolve) => {
-      declineInvite(parseInt(req.query.id as string, 10), req.body.userSub)
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    try {
+      const result = await declineInvite(
+        parseInt(req.query.id as string, 10),
+        req.body.userSub
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else if (req.method === 'POST' && req.body.variant == 'dismissRefusal') {
-    return new Promise((resolve) => {
-      dismissRefusal(parseInt(req.query.id as string, 10), req.body.userSub)
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    try {
+      const result = await dismissRefusal(
+        parseInt(req.query.id as string, 10),
+        req.body.userSub
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else if (req.method === 'POST' && req.body.variant == 'dismissFinished') {
-    return new Promise((resolve) => {
-      dismissFinished(parseInt(req.query.id as string, 10), req.body.userSub)
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    try {
+      const result = await dismissFinished(
+        parseInt(req.query.id as string, 10),
+        req.body.userSub
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else {
     res.status(404).end();
   }
+
+  await prisma.$disconnect();
+  return;
 };
 
 export default games;
