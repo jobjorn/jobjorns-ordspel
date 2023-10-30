@@ -61,9 +61,7 @@ const getGame = async (gameId: number) => {
 };
 
 const checkInSAOL = async (board: Tile[][]) => {
-  const copiedBoard = [...board];
-
-  let playedWords = getPlayedWords(copiedBoard);
+  let playedWords = getPlayedWords(board);
 
   let checkWordResult = await prisma.sAOL.findMany({
     where: {
@@ -633,7 +631,6 @@ const dismissFinished = async (gameId: number, userSub: string) => {
 
 interface PostRequestBodyMove {
   variant: 'move';
-  userSub: string;
   turnNumber: number;
   playedWord: string;
   playedBoard: string;
@@ -642,7 +639,11 @@ interface PostRequestBodyMove {
 const games = async (req: NextApiRequest, res: NextApiResponse) => {
   // endast tillåtet om man är inloggad
   const loggedInUser = await getUser(req, res);
-  if (loggedInUser === null) {
+  if (
+    loggedInUser === null ||
+    loggedInUser?.sub === undefined ||
+    loggedInUser?.sub === null
+  ) {
     res.status(401).end();
     await prisma.$disconnect();
     return;
@@ -650,15 +651,11 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
 
   if (req.method === 'POST' && req.body.variant == 'move') {
     try {
-      const {
-        userSub,
-        turnNumber,
-        playedWord,
-        playedBoard
-      }: PostRequestBodyMove = req.body;
+      const { turnNumber, playedWord, playedBoard }: PostRequestBodyMove =
+        req.body;
       const result = await submitMove(
         parseInt(req.query.id as string, 10),
-        userSub,
+        loggedInUser.sub,
         turnNumber,
         playedWord,
         playedBoard

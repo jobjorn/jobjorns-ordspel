@@ -208,7 +208,6 @@ export const listGames = (
 
 export const submitMove = async (
   gameId: number,
-  userSub: string,
   turnNumber: number,
   playedWord: string,
   playedBoard: string
@@ -223,7 +222,6 @@ export const submitMove = async (
     headers: defaultHeaders,
     body: JSON.stringify({
       variant: 'move',
-      userSub,
       turnNumber,
       playedWord,
       playedBoard
