@@ -638,12 +638,6 @@ interface PostRequestBodyMove {
   playedWord: string;
   playedBoard: string;
 }
-interface PostRequestBodyTurn {
-  variant: 'turn';
-  letters: string;
-  board: string;
-  latestWord: string;
-}
 
 const games = async (req: NextApiRequest, res: NextApiResponse) => {
   // endast tillåtet om man är inloggad
@@ -668,19 +662,6 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
         turnNumber,
         playedWord,
         playedBoard
-      );
-      res.status(200).json(result);
-    } catch (error) {
-      res.status(500).end(error);
-    }
-  } else if (req.method === 'POST' && req.body.variant == 'turn') {
-    try {
-      const { letters, board, latestWord }: PostRequestBodyTurn = req.body;
-      const result = await submitTurn(
-        parseInt(req.query.id as string, 10),
-        letters,
-        board,
-        latestWord
       );
       res.status(200).json(result);
     } catch (error) {
