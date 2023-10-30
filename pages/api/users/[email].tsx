@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
+import { getUser as getAuthedUser } from 'services/authorization';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -27,30 +28,30 @@ interface UserEmail {
   email: string;
 }
 
-const user = async (
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<void> => {
+const user = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
+    // endast tillåtet om man är inloggad
+    const loggedInUser = await getAuthedUser(req, res);
+    if (loggedInUser === null) {
+      res.status(401).end();
+      await prisma.$disconnect();
+      return;
+    }
+
     const { email } = req.query as unknown as UserEmail;
 
-    return new Promise((resolve) => {
-      getUser(email)
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    try {
+      const result = await getUser(email);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else {
     res.status(404).end();
   }
+
+  await prisma.$disconnect();
+  return;
 };
 
 export default user;
