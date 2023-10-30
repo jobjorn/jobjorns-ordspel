@@ -22,36 +22,28 @@ const updateUser = async (user: User) => {
   }
 };
 
-const users = async (
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<void> => {
+const users = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'PATCH') {
-    return new Promise(async (resolve) => {
-      const loggedInUser = await getUser(req, res);
-      const user: User = req.body.user;
-      if (loggedInUser?.sub !== user.sub) {
-        res.status(401).end('Unauthorized.');
-        resolve();
-        return;
-      }
+    const loggedInUser = await getUser(req, res);
+    const user: User = req.body.user;
+    if (loggedInUser?.sub !== user.sub || loggedInUser === null) {
+      res.status(401).end('Unauthorized.');
+      await prisma.$disconnect();
+      return;
+    }
 
-      updateUser(user)
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    try {
+      const result = await updateUser(user);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).end(error);
+    }
   } else {
     res.status(404).end();
   }
+
+  await prisma.$disconnect();
+  return;
 };
 
 export default users;
