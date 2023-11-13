@@ -4,7 +4,6 @@ import {
   checkAdjacentPlacement,
   checkCoherentWord,
   checkSameDirection,
-  checkTilesPlayed,
   getPlayedWords,
   tilePoints,
   wordPoints
@@ -157,34 +156,159 @@ const submitMove = async (
   playedWord: string,
   playedBoard: string
 ) => {
-  let parsedBoard: Tile[][] = JSON.parse(playedBoard);
+  /*
+1. hämta spelet så att vi kan jobba med det
+2. kontrollera att spelaren får lägga
+3. kontrollera att spelaren följer alla ordinarie spelregler
+4. kontrollera att draget är konsekvent med tillgängliga brickor och det sparade brädet
 
-  let tilesPlayed = checkTilesPlayed(parsedBoard); // minst en bricka måste läggas
-  let sameDirection = checkSameDirection(parsedBoard); // alla placerade brickor ska vara i samma riktning
-  let coherentWord = checkCoherentWord(parsedBoard); // placerade brickor får inte ha ett mellanrum
-  let inSAOL = await checkInSAOL(parsedBoard); // de lagda orden måste finnas i ordlistan
-  let adjacentPlacement = checkAdjacentPlacement(parsedBoard); // brickor får inte placeras som en egen ö
-  let wordIsSame = getPlayedWords(parsedBoard).join(', ') === playedWord; // det lagda ordet måste vara samma som det som skickas med
+5. spara draget!
 
+6. kontrollera om det är sista draget i turen
+om ja:
+7. skapa en ny tur
+8. uppdatera vinnande drag
+9. uppdatera poäng
+
+10. kontrollera om spelet är slut
+om ja:
+11. uppdatera spelets status
+
+12. uppdatera status för alla spelare
+
+
+  */
+
+  // 1. Kolla att spelet finns
+  const game = await getGame(gameId);
+  if (game.data === undefined) {
+    return {
+      success: false,
+      message: game.message
+    };
+  }
+
+  // 2. Kolla att användaren är deltagare i spelet
+  const userInGame = game.data?.users.find((user) => (user.userSub = userSub));
+  if (userInGame === undefined) {
+    return {
+      success: false,
+      message: 'Användaren som försöker lägga är inte deltagare i spelet.'
+    };
+  }
+
+  // 3. Kolla att man inte gör dubbla drag
+  const userAlreadyPlayed = game.data?.turns
+    .find((turn) => turn.turnNumber == turnNumber)
+    ?.moves.find((move) => move.userSub == userSub);
+  if (userAlreadyPlayed) {
+    return {
+      success: false,
+      message: 'Användaren som försöker lägga har redan lagt i den här turen.'
+    };
+  }
+
+  // 4. kontrollera att lagda brickor är brickor som spelaren har
+  const gameTiles = game.data.letters.split(',');
+  let tilesInHand: Tile[] = [];
+  for (let i = tilesInHand.length; i < 8; i++) {
+    let popped = gameTiles.shift();
+    if (popped) {
+      tilesInHand.push({ letter: popped, placed: 'hand' });
+    }
+  }
+
+  const parsedBoard: Tile[][] = JSON.parse(playedBoard);
+  const playedTiles = parsedBoard.flatMap((row) =>
+    row.filter((cell) => cell.placed == 'submitted')
+  );
+
+  playedTiles.forEach((tile) => {
+    let index = tilesInHand.findIndex(
+      (handTile) => handTile.letter == tile.letter
+    );
+    if (index == -1) {
+      return {
+        success: false,
+        message: 'Lagda brickor var inte samma som brickor i handen.'
+      };
+    }
+  });
+
+  // 5. Alla placerade brickor ska vara i samma riktning
+  const sameDirection = checkSameDirection(parsedBoard);
+  if (sameDirection == false) {
+    return {
+      success: false,
+      message:
+        'Alla spelade brickor måste spelas i samma rad eller samma kolumn.'
+    };
+  }
+
+  // 6. Placerade brickor får inte ha ett mellanrum
+  const coherentWord = checkCoherentWord(parsedBoard);
+  if (coherentWord == false) {
+    return {
+      success: false,
+      message: 'Det får inte finnas mellanrum bland de placerade brickorna.'
+    };
+  }
+
+  // 7. Brickor får inte placeras som en egen ö
+  const adjacentPlacement = checkAdjacentPlacement(parsedBoard);
+  if (adjacentPlacement == false && turnNumber > 1 && playedTiles.length > 0) {
+    return {
+      success: false,
+      message:
+        'Brickor måste placeras i anslutning till redan spelade brickor (såvida det inte är första draget).'
+    };
+  }
+
+  // 8. Det lagda ordet måste vara samma som det som skickas med som spelat ord
+  const wordIsSame = getPlayedWords(parsedBoard).join(', ') === playedWord;
+  if (wordIsSame == false) {
+    return {
+      success: false,
+      message:
+        'Det lagda ordet måste vara samma som det som skickades in som spelat ord.'
+    };
+  }
+
+  // 9. De lagda orden måste finnas i ordlistan
+  const inSAOL = await checkInSAOL(parsedBoard);
   if (!inSAOL && getPlayedWords(parsedBoard).length > 0) {
     return {
       success: false,
       message: 'Ett eller flera ord finns inte med i SAOL.'
     };
-  } else if (
-    (!(tilesPlayed == adjacentPlacement) ||
-      !sameDirection ||
-      !coherentWord ||
-      !wordIsSame) &&
-    playedWord.length > 0
-  ) {
-    return {
-      success: false,
-      message: 'Något gick fel med draget, försök igen.'
-    };
+  }
+
+  // 10. Kontrollera att med avseende på andra brickor än de lagda brickorna är brädet identiskt med det sparade brädet
+  if (game.data.board !== null) {
+    const savedBoard: Tile[][] = JSON.parse(game.data.board);
+
+    let playedBoardLessSubmitted = parsedBoard.map((row) =>
+      row.map((cell) => {
+        if (cell.placed !== 'submitted') {
+          return cell;
+        } else {
+          return { letter: '', placed: 'no' };
+        }
+      })
+    );
+    if (
+      JSON.stringify(savedBoard) !== JSON.stringify(playedBoardLessSubmitted)
+    ) {
+      return {
+        success: false,
+        message:
+          'Det spelade brädet är inte identiskt med det sparade brädet (med undantag för lagda brickor).'
+      };
+    }
   }
 
   try {
+    // Spara draget
     const createMove = await prisma.move.create({
       data: {
         turn: {
@@ -216,52 +340,50 @@ const submitMove = async (
       }
     });
 
-    if (createMove !== null) {
-      await prisma.usersOnGames.update({
-        where: {
-          userSub_gameId: {
-            gameId: gameId,
-            userSub: userSub
-          }
-        },
-        data: {
-          status: 'OTHERTURN',
-          statusTime: new Date()
-        }
-      });
-
-      let turnEndResult = await runTurnEnd(gameId);
-
-      // For the full code sample see here: https://github.com/ably/quickstart-js
-      const ablyApiKey = process.env.ABLY_API_KEY;
-      if (ablyApiKey) {
-        const ably = new Ably.Realtime.Promise(ablyApiKey);
-        await ably.connection.once('connected');
-        const channel = ably.channels.get('quickstart');
-        await channel.publish('move', {
-          gameId: gameId,
-          newTurn: turnEndResult.success
-        });
-        ably.close();
-      }
-
-      return {
-        success: true,
-        move: { response: 'Draget sparades' },
-        turn: { response: turnEndResult.turn.response },
-        updateMove: { response: turnEndResult.updateMove.response }
-      };
-    } else {
+    if (createMove === null) {
       throw new Error(
         'Något gick fel i sparandet av draget, createMove var null'
       );
     }
+
+    await prisma.usersOnGames.update({
+      where: {
+        userSub_gameId: {
+          gameId: gameId,
+          userSub: userSub
+        }
+      },
+      data: {
+        status: 'OTHERTURN',
+        statusTime: new Date()
+      }
+    });
+
+    let turnEndResult = await runTurnEnd(gameId);
+
+    // For the full code sample see here: https://github.com/ably/quickstart-js
+    const ablyApiKey = process.env.ABLY_API_KEY;
+    if (ablyApiKey) {
+      const ably = new Ably.Realtime.Promise(ablyApiKey);
+      await ably.connection.once('connected');
+      const channel = ably.channels.get('quickstart');
+      await channel.publish('move', {
+        gameId: gameId,
+        newTurn: turnEndResult.success
+      });
+      ably.close();
+    }
+
+    return {
+      success: true,
+      move: { response: 'Draget sparades' },
+      turn: { response: turnEndResult.turn.response },
+      updateMove: { response: turnEndResult.updateMove.response }
+    };
   } catch (error) {
     return {
       success: false,
-      move: { response: 'Det blev ett error: ' + error },
-      turn: { response: 'Funktionen kördes ej' },
-      updateMove: { response: 'Funktionen kördes ej' }
+      message: 'Det blev ett error: ' + error
     };
   }
 };
