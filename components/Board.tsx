@@ -308,8 +308,8 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
         setAlerts([
           {
             severity: 'error',
-            message: moveResult.error.message
-              ? moveResult.error.message
+            message: moveResult.message
+              ? moveResult.message
               : 'Något gick fel. Försök igen.'
           }
         ]);
@@ -377,8 +377,8 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
       setAlerts([
         {
           severity: 'error',
-          message: moveResult.error.message
-            ? moveResult.error.message
+          message: moveResult.message
+            ? moveResult.message
             : 'Något gick fel. Försök igen.'
         }
       ]);

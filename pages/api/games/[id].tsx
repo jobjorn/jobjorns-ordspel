@@ -476,7 +476,7 @@ om ja:
   } catch (error) {
     return {
       success: false,
-      message: 'Det blev ett error: ' + error
+      error: error
     };
   }
 };

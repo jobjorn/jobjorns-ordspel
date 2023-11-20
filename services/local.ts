@@ -211,7 +211,7 @@ export const submitMove = async (
   turnNumber: number,
   playedWord: string,
   playedBoard: string
-): Promise<ResponseType<string>> => {
+) => {
   const defaultHeaders = {
     Accept: 'application/json',
     'Content-Type': 'application/json;charset=UTF-8'
@@ -230,10 +230,9 @@ export const submitMove = async (
 
   try {
     const moveResult = await (await fetch(url, options)).json();
-
     return moveResult;
   } catch (error) {
-    return { success: false as const, error: error as Error };
+    return { success: false as const, message: 'Något gick fel!' };
   }
 };
 
