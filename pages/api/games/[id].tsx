@@ -102,29 +102,6 @@ const submitMove = async (
   playedWord: string,
   playedBoard: string
 ) => {
-  /*
-1. hämta spelet så att vi kan jobba med det
-2. kontrollera att spelaren får lägga
-3. kontrollera att spelaren följer alla ordinarie spelregler
-4. kontrollera att draget är konsekvent med tillgängliga brickor och det sparade brädet
-
-5. spara draget!
-
-6. kontrollera om det är sista draget i turen
-om ja:
-7. skapa en ny tur
-8. uppdatera vinnande drag
-9. uppdatera poäng
-
-10. kontrollera om spelet är slut
-om ja:
-11. uppdatera spelets status
-
-12. uppdatera status för alla spelare
-
-
-  */
-
   // 1. Kolla att spelet finns
   const game = await getGame(gameId);
   if (game.data === undefined) {
@@ -292,7 +269,7 @@ om ja:
       );
     }
 
-    prisma.usersOnGames.update({
+    await prisma.usersOnGames.update({
       where: {
         userSub_gameId: {
           gameId: gameId,
@@ -440,7 +417,8 @@ om ja:
         latestWord: winningMove.playedBoard,
         currentTurn: {
           increment: 1
-        }
+        },
+        finished: gameEnded
       },
       where: {
         id: gameId
@@ -448,15 +426,6 @@ om ja:
     });
 
     if (gameEnded) {
-      // om spelet tagit slut, markera spelet som slut
-      prisma.game.update({
-        data: {
-          finished: true
-        },
-        where: {
-          id: gameId
-        }
-      });
       // om spelet tagit slut, markera alla spelare som FINISHED
       prisma.usersOnGames.updateMany({
         where: {
