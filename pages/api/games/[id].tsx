@@ -95,60 +95,6 @@ const checkInSAOL = async (board: Tile[][]) => {
   }
 };
 
-const updatePoints = async (gameId: number) => {
-  // TODO: update points for all players
-  // sum of playedPoints in move per player with the gameId
-
-  try {
-    const newPoints: { userSub: string; total_points: bigint }[] =
-      await prisma.$queryRaw`
-      SELECT
-        "Move"."userSub",
-        SUM("Move"."playedPoints") AS total_points
-      FROM
-        "Turn"
-      JOIN
-        "Move" ON "Turn".id = "Move"."turnId"
-      WHERE
-        "Turn"."gameId" = ${gameId}
-      GROUP BY
-        "Move"."userSub";
-    `;
-
-    console.log(newPoints);
-    if (newPoints.length > 0) {
-      newPoints.map(async (newPoint) => {
-        let updatePoint = await prisma.usersOnGames.update({
-          where: {
-            userSub_gameId: {
-              gameId: gameId,
-              userSub: newPoint.userSub
-            }
-          },
-          data: {
-            points: Number(newPoint.total_points)
-          }
-        });
-        console.log(updatePoint);
-      });
-    }
-
-    if (newPoints === null) {
-      return { success: false as const, response: 'Inga poäng uppdaterades' };
-    } else {
-      return {
-        success: true as const,
-        response: newPoints
-      };
-    }
-  } catch (error) {
-    return {
-      success: false as const,
-      response: 'Det blev ett error: ' + error
-    };
-  }
-};
-
 const submitMove = async (
   gameId: number,
   userSub: string,
@@ -346,7 +292,7 @@ om ja:
       );
     }
 
-    await prisma.usersOnGames.update({
+    prisma.usersOnGames.update({
       where: {
         userSub_gameId: {
           gameId: gameId,
@@ -359,7 +305,14 @@ om ja:
       }
     });
 
-    let turnEndResult = await runTurnEnd(gameId);
+    let playersCount = game.data.users.length + game.data.invitations.length;
+    let lastTurn = game.data.turns[0];
+    lastTurn.moves.push(createMove); // lägg in draget vi just sparade
+    let playedCount = lastTurn?.moves.length;
+    let allSkipped = true;
+    let gameEnded = false;
+
+    let newTurn = playersCount == playedCount && playersCount > 0 && lastTurn;
 
     // For the full code sample see here: https://github.com/ably/quickstart-js
     const ablyApiKey = process.env.ABLY_API_KEY;
@@ -369,174 +322,122 @@ om ja:
       const channel = ably.channels.get('quickstart');
       await channel.publish('move', {
         gameId: gameId,
-        newTurn: turnEndResult.success
+        newTurn: newTurn
       });
       ably.close();
     }
 
-    return {
-      success: true,
-      move: { response: 'Draget sparades' },
-      turn: { response: turnEndResult.turn.response },
-      updateMove: { response: turnEndResult.updateMove.response }
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: 'Det blev ett error: ' + error
-    };
-  }
-};
+    if (!newTurn) {
+      // turen är inte slut. dags att säga hejdå
 
-export const runTurnEnd = async (gameId: number) => {
-  const game = await getGame(gameId);
-
-  if (game.data) {
-    let playersCount = game.data.users.length + game.data.invitations.length;
-    let lastTurn = game.data.turns[0];
-    let playedCount = lastTurn?.moves.length;
-    let allSkipped = true;
-    let gameEnded = false;
-
-    if (playersCount == playedCount && playersCount > 0 && lastTurn) {
-      let winningMove = lastTurn.moves[0];
-      lastTurn.moves.map((move) => {
-        if (
-          move.playedPoints > winningMove.playedPoints ||
-          (move.playedPoints == winningMove.playedPoints &&
-            move.playedTime < winningMove.playedTime)
-        ) {
-          winningMove = move;
-        }
-
-        if (move.playedWord !== '') {
-          allSkipped = false;
-        }
-      });
-
-      if (allSkipped) {
-        gameEnded = true;
-      }
-
-      let updateMove = await updateWinningMove(winningMove.id);
-      if (updateMove.success == false) {
-        throw new Error(updateMove.response);
-      }
-
-      let updatedPoints = await updatePoints(gameId);
-      if (updatedPoints.success == false) {
-        throw new Error(updatedPoints.response);
-      }
-
-      let letters = game.data.letters.split(',');
-      let playedLetters: string[] = [];
-      let playedBoard: Tile[][] = JSON.parse(winningMove.playedBoard);
-      playedBoard.map((row) =>
-        row.map((cell) => {
-          if (cell.placed === 'submitted') {
-            playedLetters.push(cell.letter);
-          }
-        })
-      );
-      playedLetters.forEach((letter) => {
-        let index = letters.indexOf(letter);
-        if (index > -1) {
-          letters.splice(index, 1);
-        }
-      });
-
-      if (letters.length == 0 && !gameEnded) {
-        gameEnded = true;
-      }
-
-      let newLetters = letters.join(',');
-
-      let winningBoard = winningMove.playedBoard
-        .replaceAll('latest', 'board')
-        .replaceAll('submitted', 'latest');
-
-      try {
-        const turnResult = await submitTurn(
-          gameId,
-          newLetters,
-          winningBoard,
-          winningMove.playedWord
-        );
-        if (turnResult.success && updateMove.success) {
-          if (gameEnded) {
-            await endGame(gameId);
-          }
-
-          return {
-            success: true as const,
-            turn: { response: turnResult.response },
-            updateMove: { response: updateMove.response }
-          };
-        } else {
-          throw new Error(turnResult.response);
-        }
-      } catch (error) {
-        return {
-          success: false as const,
-          turn: { response: error },
-          updateMove: { response: updateMove.response }
-        };
-      }
-    } else {
       return {
-        success: false as const,
-        turn: { response: 'Inte sista turen' },
-        updateMove: { response: 'Inte sista turen' }
+        success: true,
+        message: 'Nytt drag sparades. Turen fortsätter'
       };
     }
-  } else {
-    return {
-      success: false as const,
-      turn: { response: 'Game hittades inte' },
-      updateMove: { response: 'Game hittades inte' }
-    };
-  }
-};
 
-const updateWinningMove = async (moveId: number) => {
-  try {
-    const updateMove = await prisma.move.update({
+    // annars är det dags för ett nytt drag
+    // definiera det vinnande draget eller konstatera att alla skippade
+    let winningMove = lastTurn.moves[0];
+    lastTurn.moves.map((move) => {
+      if (
+        move.playedPoints > winningMove.playedPoints ||
+        (move.playedPoints == winningMove.playedPoints &&
+          move.playedTime < winningMove.playedTime)
+      ) {
+        winningMove = move;
+      }
+
+      // om någon har lagt ett ord är det inte alla som har skippat
+      if (move.playedWord !== '') {
+        allSkipped = false;
+      }
+    });
+
+    if (allSkipped) {
+      gameEnded = true;
+    }
+
+    // markera det vinnande draget som vunnet
+    prisma.move.update({
       where: {
-        id: moveId
+        id: winningMove.id
       },
       data: {
         won: true
       }
     });
 
-    if (updateMove === null) {
-      return { success: false as const, response: 'Inget drag returnerades' };
-    } else {
-      return {
-        success: true as const,
-        response: updateMove
-      };
-    }
-  } catch (error) {
-    return {
-      success: false as const,
-      response: 'Det blev ett error: ' + error
-    };
-  }
-};
+    // uppdatera poäng för alla spelare
+    // först en SQL-fråga för att räkna fram poäng per spelare
+    const newPoints: { userSub: string; total_points: bigint }[] =
+      await prisma.$queryRaw`
+      SELECT
+        "Move"."userSub",
+        SUM("Move"."playedPoints") AS total_points
+      FROM
+        "Turn"
+      JOIN
+        "Move" ON "Turn".id = "Move"."turnId"
+      WHERE
+        "Turn"."gameId" = ${gameId}
+      GROUP BY
+        "Move"."userSub";
+    `;
 
-const submitTurn = async (
-  gameId: number,
-  letters: string,
-  board: string,
-  latestWord: string
-) => {
-  try {
-    const updateResult = await prisma.game.update({
+    // sedan en map som uppdaterar respektive spelares poäng
+    if (newPoints.length > 0) {
+      newPoints.map(async (newPoint) => {
+        prisma.usersOnGames.update({
+          where: {
+            userSub_gameId: {
+              gameId: gameId,
+              userSub: newPoint.userSub
+            }
+          },
+          data: {
+            points: Number(newPoint.total_points)
+          }
+        });
+      });
+    }
+
+    // dags att rita om brädet
+    // ta bort lagda brickor från "brickpåsen"
+    let letters = game.data.letters.split(',');
+    let playedLetters: string[] = [];
+    let parsedWinningBoard: Tile[][] = JSON.parse(winningMove.playedBoard);
+    parsedWinningBoard.map((row) =>
+      row.map((cell) => {
+        if (cell.placed === 'submitted') {
+          playedLetters.push(cell.letter);
+        }
+      })
+    );
+    playedLetters.forEach((letter) => {
+      let index = letters.indexOf(letter);
+      if (index > -1) {
+        letters.splice(index, 1);
+      }
+    });
+
+    // om det inte finns några brickor kvar är spelet slut!
+    if (letters.length == 0) {
+      gameEnded = true;
+    }
+
+    let newLetters = letters.join(',');
+
+    let winningBoard = winningMove.playedBoard
+      .replaceAll('latest', 'board')
+      .replaceAll('submitted', 'latest');
+
+    // uppdatera game-statet med en ny tur
+    await prisma.game.update({
       data: {
-        letters,
-        board,
-        latestWord,
+        letters: newLetters,
+        board: winningBoard,
+        latestWord: winningMove.playedBoard,
         currentTurn: {
           increment: 1
         }
@@ -545,43 +446,19 @@ const submitTurn = async (
         id: gameId
       }
     });
-    if (updateResult !== null) {
-      await prisma.usersOnGames.updateMany({
-        where: {
-          gameId: gameId
-        },
+
+    if (gameEnded) {
+      // om spelet tagit slut, markera spelet som slut
+      prisma.game.update({
         data: {
-          status: 'YOURTURN',
-          statusTime: new Date()
+          finished: true
+        },
+        where: {
+          id: gameId
         }
       });
-
-      return { success: true as const, response: 'Ny tur sparades' };
-    } else {
-      throw new Error(
-        'Något gick fel i sparandet av ny tur, updateResult var null'
-      );
-    }
-  } catch (error) {
-    return {
-      success: false as const,
-      response: 'Det blev ett error: ' + error
-    };
-  }
-};
-
-const endGame = async (gameId: number) => {
-  try {
-    const endGameResult = await prisma.game.update({
-      data: {
-        finished: true
-      },
-      where: {
-        id: gameId
-      }
-    });
-    if (endGameResult !== null) {
-      await prisma.usersOnGames.updateMany({
+      // om spelet tagit slut, markera alla spelare som FINISHED
+      prisma.usersOnGames.updateMany({
         where: {
           gameId: gameId
         },
@@ -590,17 +467,16 @@ const endGame = async (gameId: number) => {
           statusTime: new Date()
         }
       });
-
-      return { success: true as const, response: 'Spelet avslutades' };
-    } else {
-      throw new Error(
-        'Något gick fel i avslutandet av spelet, endGameResult var null'
-      );
     }
+
+    return {
+      success: true,
+      message: 'Draget sparades'
+    };
   } catch (error) {
     return {
-      success: false as const,
-      response: 'Det blev ett error: ' + error
+      success: false,
+      message: 'Det blev ett error: ' + error
     };
   }
 };

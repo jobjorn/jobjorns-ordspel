@@ -211,7 +211,7 @@ export const submitMove = async (
   turnNumber: number,
   playedWord: string,
   playedBoard: string
-) => {
+): Promise<ResponseType<string>> => {
   const defaultHeaders = {
     Accept: 'application/json',
     'Content-Type': 'application/json;charset=UTF-8'
@@ -231,12 +231,9 @@ export const submitMove = async (
   try {
     const moveResult = await (await fetch(url, options)).json();
 
-    return { move: moveResult };
+    return moveResult;
   } catch (error) {
-    return {
-      move: { success: false, response: error },
-      turn: { success: false, response: error }
-    };
+    return { success: false as const, error: error as Error };
   }
 };
 
