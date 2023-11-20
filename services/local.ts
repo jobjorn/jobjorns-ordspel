@@ -4,7 +4,8 @@ import {
   ResponseType,
   GameWithEverything,
   GameListData,
-  UserListData
+  UserListData,
+  Tile
 } from 'types/types';
 
 /*
@@ -210,7 +211,7 @@ export const submitMove = async (
   gameId: number,
   turnNumber: number,
   playedWord: string,
-  playedBoard: string
+  playedBoard: Tile[][]
 ) => {
   const defaultHeaders = {
     Accept: 'application/json',

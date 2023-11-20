@@ -286,13 +286,12 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
           return cell;
         })
       );
-      const currentBoard = JSON.stringify(submittedBoard);
 
       let moveResult = await submitMove(
         game.id,
         game.currentTurn,
         playedWords,
-        currentBoard
+        submittedBoard
       );
 
       if (moveResult.success) {
@@ -362,7 +361,7 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
       game.id,
       game.currentTurn,
       '',
-      JSON.stringify(copiedBoard)
+      copiedBoard
     );
     if (moveResult.success) {
       setUnplayedBoard(copiedBoard);

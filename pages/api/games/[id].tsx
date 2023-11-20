@@ -100,7 +100,7 @@ const submitMove = async (
   userSub: string,
   turnNumber: number,
   playedWord: string,
-  playedBoard: string
+  playedBoard: Tile[][]
 ) => {
   // 1. Kolla att spelet finns
   const game = await getGame(gameId);
@@ -141,8 +141,7 @@ const submitMove = async (
     }
   }
 
-  const parsedBoard: Tile[][] = JSON.parse(playedBoard);
-  const playedTiles = parsedBoard.flatMap((row) =>
+  const playedTiles = playedBoard.flatMap((row) =>
     row.filter((cell) => cell.placed == 'submitted')
   );
 
@@ -159,7 +158,7 @@ const submitMove = async (
   });
 
   // 5. Alla placerade brickor ska vara i samma riktning
-  const sameDirection = checkSameDirection(parsedBoard);
+  const sameDirection = checkSameDirection(playedBoard);
   if (sameDirection == false) {
     return {
       success: false,
@@ -169,7 +168,7 @@ const submitMove = async (
   }
 
   // 6. Placerade brickor får inte ha ett mellanrum
-  const coherentWord = checkCoherentWord(parsedBoard);
+  const coherentWord = checkCoherentWord(playedBoard);
   if (coherentWord == false) {
     return {
       success: false,
@@ -178,7 +177,7 @@ const submitMove = async (
   }
 
   // 7. Brickor får inte placeras som en egen ö
-  const adjacentPlacement = checkAdjacentPlacement(parsedBoard);
+  const adjacentPlacement = checkAdjacentPlacement(playedBoard);
   if (adjacentPlacement == false && turnNumber > 1 && playedTiles.length > 0) {
     return {
       success: false,
@@ -188,7 +187,7 @@ const submitMove = async (
   }
 
   // 8. Det lagda ordet måste vara samma som det som skickas med som spelat ord
-  const wordIsSame = getPlayedWords(parsedBoard).join(', ') === playedWord;
+  const wordIsSame = getPlayedWords(playedBoard).join(', ') === playedWord;
   if (wordIsSame == false) {
     return {
       success: false,
@@ -198,8 +197,8 @@ const submitMove = async (
   }
 
   // 9. De lagda orden måste finnas i ordlistan
-  const inSAOL = await checkInSAOL(parsedBoard);
-  if (!inSAOL && getPlayedWords(parsedBoard).length > 0) {
+  const inSAOL = await checkInSAOL(playedBoard);
+  if (!inSAOL && getPlayedWords(playedBoard).length > 0) {
     return {
       success: false,
       message: 'Ett eller flera ord finns inte med i SAOL.'
@@ -210,7 +209,7 @@ const submitMove = async (
   if (game.data.board !== null) {
     const savedBoard: Tile[][] = JSON.parse(game.data.board);
 
-    let playedBoardLessSubmitted = parsedBoard.map((row) =>
+    let playedBoardLessSubmitted = playedBoard.map((row) =>
       row.map((cell) => {
         if (cell.placed !== 'submitted') {
           return cell;
@@ -258,8 +257,8 @@ const submitMove = async (
           }
         },
         playedWord: playedWord,
-        playedBoard: playedBoard,
-        playedPoints: wordPoints(playedWord) + tilePoints(parsedBoard)
+        playedBoard: JSON.stringify(playedBoard),
+        playedPoints: wordPoints(playedWord) + tilePoints(playedBoard)
       }
     });
 
@@ -600,7 +599,7 @@ interface PostRequestBodyMove {
   variant: 'move';
   turnNumber: number;
   playedWord: string;
-  playedBoard: string;
+  playedBoard: Tile[][];
 }
 
 const games = async (req: NextApiRequest, res: NextApiResponse) => {
