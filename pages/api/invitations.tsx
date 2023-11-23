@@ -75,7 +75,7 @@ const invitations = async (req: NextApiRequest, res: NextApiResponse) => {
       );
       res.status(200).json(result);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.status(500).end('Något gick fel.');
     }
   } else {

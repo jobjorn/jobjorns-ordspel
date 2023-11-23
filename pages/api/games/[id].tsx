@@ -658,7 +658,7 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
         res.status(200).json(result);
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'GET') {
@@ -666,7 +666,7 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
       const result = await getGame(parseInt(req.query.id as string, 10));
       res.status(200).json(result);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'POST' && req.body.variant == 'accept') {
@@ -677,7 +677,7 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
       );
       res.status(200).json(result);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'POST' && req.body.variant == 'decline') {
@@ -688,7 +688,7 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
       );
       res.status(200).json(result);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'POST' && req.body.variant == 'dismissRefusal') {
@@ -699,7 +699,7 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
       );
       res.status(200).json(result);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'POST' && req.body.variant == 'dismissFinished') {
@@ -710,7 +710,7 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
       );
       res.status(200).json(result);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.status(500).end('Något gick fel.');
     }
   } else {

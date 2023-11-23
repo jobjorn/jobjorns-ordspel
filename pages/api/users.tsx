@@ -80,7 +80,7 @@ const users = async (req: NextApiRequest, res: NextApiResponse) => {
       const result = await addUser(parsedInputUser.data);
       res.status(200).json(result);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'GET') {
@@ -95,7 +95,7 @@ const users = async (req: NextApiRequest, res: NextApiResponse) => {
       const result = await listUsers();
       res.status(200).json(result);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.status(500).end('Något gick fel.');
     }
   } else {

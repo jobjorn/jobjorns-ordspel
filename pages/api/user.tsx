@@ -36,7 +36,7 @@ const users = async (req: NextApiRequest, res: NextApiResponse) => {
       const result = await updateUser(user);
       res.status(200).json(result);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.status(500).end('Något gick fel.');
     }
   } else {

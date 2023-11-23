@@ -187,7 +187,7 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
         const result = await startGame(loggedInUserSub, players, emailList);
         res.status(200).json(result);
       } catch (error) {
-        console.log(error);
+        console.error(error);
         res.status(500).end('Något gick fel.');
       }
     }
@@ -196,7 +196,7 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
       const result = await listGames(req.query.usersub as string);
       res.status(200).json(result);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.status(500).end('Något gick fel.');
     }
   } else {
