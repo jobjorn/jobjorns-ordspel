@@ -11,6 +11,7 @@ import {
 import Ably from 'ably';
 import { Tile } from 'types/types';
 import { getUser } from 'services/authorization';
+import { z } from 'zod';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -619,14 +620,43 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
     try {
       const { turnNumber, playedWord, playedBoard }: PostRequestBodyMove =
         req.body;
-      const result = await submitMove(
-        parseInt(req.query.id as string, 10),
-        loggedInUser.sub,
-        turnNumber,
-        playedWord,
-        playedBoard
-      );
-      res.status(200).json(result);
+
+      const moveSchema = z.object({
+        turnNumber: z.number(),
+        playedWord: z.string(),
+        playedBoard: z.array(
+          z.array(
+            z.object({
+              letter: z.string().max(1),
+              placed: z.enum(['no', 'hand', 'board', 'submitted', 'latest'])
+            })
+          )
+        )
+      });
+
+      const parsedMove = moveSchema.safeParse({
+        turnNumber: turnNumber,
+        playedWord: playedWord,
+        playedBoard: playedBoard
+      });
+
+      console.log(parsedMove.success);
+
+      if (!parsedMove.success) {
+        console.log(parsedMove.error);
+        throw new Error(
+          'Något gick fel i hanteringen av draget, parsedMove lyckades inte'
+        );
+      } else {
+        const result = await submitMove(
+          parseInt(req.query.id as string, 10),
+          loggedInUser.sub,
+          parsedMove.data.turnNumber,
+          parsedMove.data.playedWord,
+          parsedMove.data.playedBoard
+        );
+        res.status(200).json(result);
+      }
     } catch (error) {
       console.log(error);
       res.status(500).end('Något gick fel.');
