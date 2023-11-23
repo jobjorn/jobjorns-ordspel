@@ -80,7 +80,8 @@ const users = async (req: NextApiRequest, res: NextApiResponse) => {
       const result = await addUser(parsedInputUser.data);
       res.status(200).json(result);
     } catch (error) {
-      res.status(500).end(error);
+      console.log(error);
+      res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'GET') {
     // endast tillåtet om man är inloggad
@@ -94,7 +95,8 @@ const users = async (req: NextApiRequest, res: NextApiResponse) => {
       const result = await listUsers();
       res.status(200).json(result);
     } catch (error) {
-      res.status(500).end(error);
+      console.log(error);
+      res.status(500).end('Något gick fel.');
     }
   } else {
     res.status(404).end();

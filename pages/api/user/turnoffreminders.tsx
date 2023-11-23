@@ -31,7 +31,8 @@ const turnOffReminders = async (req: NextApiRequest, res: NextApiResponse) => {
       const result = await updateRemindersSetting(key);
       res.status(200).json(result);
     } catch (error) {
-      res.status(500).end(error);
+      console.log(error);
+      res.status(500).end('Något gick fel.');
     }
   } else {
     res.status(404).end();

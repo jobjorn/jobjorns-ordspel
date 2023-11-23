@@ -628,14 +628,16 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
       );
       res.status(200).json(result);
     } catch (error) {
-      res.status(500).end(error);
+      console.log(error);
+      res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'GET') {
     try {
       const result = await getGame(parseInt(req.query.id as string, 10));
       res.status(200).json(result);
     } catch (error) {
-      res.status(500).end(error);
+      console.log(error);
+      res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'POST' && req.body.variant == 'accept') {
     try {
@@ -645,7 +647,8 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
       );
       res.status(200).json(result);
     } catch (error) {
-      res.status(500).end(error);
+      console.log(error);
+      res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'POST' && req.body.variant == 'decline') {
     try {
@@ -655,7 +658,8 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
       );
       res.status(200).json(result);
     } catch (error) {
-      res.status(500).end(error);
+      console.log(error);
+      res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'POST' && req.body.variant == 'dismissRefusal') {
     try {
@@ -665,7 +669,8 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
       );
       res.status(200).json(result);
     } catch (error) {
-      res.status(500).end(error);
+      console.log(error);
+      res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'POST' && req.body.variant == 'dismissFinished') {
     try {
@@ -675,7 +680,8 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
       );
       res.status(200).json(result);
     } catch (error) {
-      res.status(500).end(error);
+      console.log(error);
+      res.status(500).end('Något gick fel.');
     }
   } else {
     res.status(404).end();
