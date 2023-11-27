@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -26,9 +27,16 @@ const updateRemindersSetting = async (key: string) => {
 const turnOffReminders = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'PATCH') {
     try {
-      const key: string = req.body.key;
+      const keySchema = z.string().uuid();
 
-      const result = await updateRemindersSetting(key);
+      const parsedKey = keySchema.safeParse(req.body.key);
+
+      if (!parsedKey.success) {
+        console.log(parsedKey.error);
+        throw new Error('Invalid key.');
+      }
+
+      const result = await updateRemindersSetting(parsedKey.data);
       res.status(200).json(result);
     } catch (error) {
       console.error(error);

@@ -40,6 +40,7 @@ const addUser = async (user: UserFromAuth0Input) => {
 
 const listUsers = async () => {
   // används i dagsläget endast på "Nytt spel"-sidan
+  // datat är därför begränsat till name, picture, sub där settingVisibility är true
   try {
     const listUsersPrisma = await prisma.user.findMany({
       select: {
@@ -86,11 +87,16 @@ const users = async (req: NextApiRequest, res: NextApiResponse) => {
   } else if (req.method === 'GET') {
     // endast tillåtet om man är inloggad
     const loggedInUser = await getUser(req, res);
-    if (loggedInUser === null) {
+    if (
+      loggedInUser === null ||
+      loggedInUser?.sub === undefined ||
+      loggedInUser?.sub === null
+    ) {
       res.status(401).end();
       await prisma.$disconnect();
       return;
     }
+
     try {
       const result = await listUsers();
       res.status(200).json(result);

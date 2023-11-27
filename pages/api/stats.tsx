@@ -50,7 +50,11 @@ const stats = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
     // endast tillåtet om man är inloggad
     const loggedInUser = await getUser(req, res);
-    if (loggedInUser === null) {
+    if (
+      loggedInUser === null ||
+      loggedInUser?.sub === undefined ||
+      loggedInUser?.sub === null
+    ) {
       res.status(401).end();
       await prisma.$disconnect();
       return;

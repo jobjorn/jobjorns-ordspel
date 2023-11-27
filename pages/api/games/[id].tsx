@@ -640,8 +640,6 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
         playedBoard: playedBoard
       });
 
-      console.log(parsedMove.success);
-
       if (!parsedMove.success) {
         console.log(parsedMove.error);
         throw new Error(
@@ -669,45 +667,56 @@ const games = async (req: NextApiRequest, res: NextApiResponse) => {
       console.error(error);
       res.status(500).end('Något gick fel.');
     }
-  } else if (req.method === 'POST' && req.body.variant == 'accept') {
+  } else if (req.method === 'POST' && req.body.variant != 'move') {
     try {
-      const result = await acceptInvite(
-        parseInt(req.query.id as string, 10),
-        req.body.userSub
-      );
-      res.status(200).json(result);
-    } catch (error) {
-      console.error(error);
-      res.status(500).end('Något gick fel.');
-    }
-  } else if (req.method === 'POST' && req.body.variant == 'decline') {
-    try {
-      const result = await declineInvite(
-        parseInt(req.query.id as string, 10),
-        req.body.userSub
-      );
-      res.status(200).json(result);
-    } catch (error) {
-      console.error(error);
-      res.status(500).end('Något gick fel.');
-    }
-  } else if (req.method === 'POST' && req.body.variant == 'dismissRefusal') {
-    try {
-      const result = await dismissRefusal(
-        parseInt(req.query.id as string, 10),
-        req.body.userSub
-      );
-      res.status(200).json(result);
-    } catch (error) {
-      console.error(error);
-      res.status(500).end('Något gick fel.');
-    }
-  } else if (req.method === 'POST' && req.body.variant == 'dismissFinished') {
-    try {
-      const result = await dismissFinished(
-        parseInt(req.query.id as string, 10),
-        req.body.userSub
-      );
+      const notMoveSchema = z.object({
+        variant: z.enum([
+          'accept',
+          'decline',
+          'dismissRefusal',
+          'dismissFinished'
+        ]),
+        gameId: z.number(),
+        userSub: z.string()
+      });
+
+      const parsedInput = notMoveSchema.safeParse({
+        variant: req.body.variant,
+        gameId: parseInt(req.query.id as string, 10),
+        userSub: req.body.userSub
+      });
+
+      if (!parsedInput.success) {
+        console.log(parsedInput.error);
+        throw new Error('Något gick fel, safeParse lyckades inte');
+      }
+      let result;
+      if (req.body.variant == 'accept') {
+        result = await acceptInvite(
+          parsedInput.data.gameId,
+          parsedInput.data.userSub
+        );
+      } else if (req.body.variant == 'decline') {
+        result = await declineInvite(
+          parsedInput.data.gameId,
+          parsedInput.data.userSub
+        );
+      } else if (req.body.variant == 'dismissRefusal') {
+        result = await dismissRefusal(
+          parsedInput.data.gameId,
+          parsedInput.data.userSub
+        );
+      } else if (req.body.variant == 'dismissFinished') {
+        result = await dismissFinished(
+          parsedInput.data.gameId,
+          parsedInput.data.userSub
+        );
+      } else {
+        throw new Error(
+          'Något gick fel, varianten var inte move, accept, decline, dismissRefusal eller dismissFinished'
+        );
+      }
+
       res.status(200).json(result);
     } catch (error) {
       console.error(error);

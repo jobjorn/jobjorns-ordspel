@@ -5,6 +5,7 @@ import he from 'he';
 import { GameListData, UserListData } from 'types/types';
 import { getUser } from 'services/authorization';
 import { shuffleStartLetters } from 'services/game';
+import { z } from 'zod';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -161,39 +162,64 @@ const listGames = async (userSub: string) => {
   }
 };
 
-interface PostRequestBody {
-  starter: User;
-  players: UserListData[];
-  emailList: string[];
-}
-
 const games = async (req: NextApiRequest, res: NextApiResponse) => {
   // endast tillåtet om man är inloggad
   const loggedInUser = await getUser(req, res);
-  if (loggedInUser === null) {
+  if (
+    loggedInUser === null ||
+    loggedInUser?.sub === undefined ||
+    loggedInUser?.sub === null
+  ) {
     res.status(401).end();
     await prisma.$disconnect();
     return;
   }
 
   if (req.method === 'POST') {
-    const { players, emailList }: PostRequestBody = req.body;
-    const loggedInUserSub = loggedInUser?.sub;
+    try {
+      const newGameSchema = z.object({
+        players: z.array(
+          z.object({
+            name: z.string(),
+            sub: z.string(),
+            picture: z.string().nullable()
+          })
+        ),
+        emailList: z.array(z.string())
+      });
+      const parsedNewGame = newGameSchema.safeParse(req.body);
 
-    if (!loggedInUserSub || (!players && !emailList)) {
-      res.status(400).end('Players saknas');
-    } else {
-      try {
-        const result = await startGame(loggedInUserSub, players, emailList);
-        res.status(200).json(result);
-      } catch (error) {
-        console.error(error);
-        res.status(500).end('Något gick fel.');
+      if (!parsedNewGame.success) {
+        console.log(parsedNewGame.error);
+        throw new Error('Invalid key.');
       }
+
+      if (!parsedNewGame.data.players && !parsedNewGame.data.emailList) {
+        throw new Error('Players/emaillist saknas.');
+      }
+
+      const result = await startGame(
+        loggedInUser.sub,
+        parsedNewGame.data.players,
+        parsedNewGame.data.emailList
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).end('Något gick fel.');
     }
   } else if (req.method === 'GET') {
     try {
-      const result = await listGames(req.query.usersub as string);
+      const userSubSchema = z.string();
+
+      const parsedUserSub = userSubSchema.safeParse(req.query.usersub);
+
+      if (!parsedUserSub.success) {
+        console.log(parsedUserSub.error);
+        throw new Error('Invalid key.');
+      }
+
+      const result = await listGames(parsedUserSub.data);
       res.status(200).json(result);
     } catch (error) {
       console.error(error);

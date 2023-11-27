@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
 import { getUser as getAuthedUser } from 'services/authorization';
+import { z } from 'zod';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -24,10 +25,6 @@ const getUser = async (email: string) => {
   }
 };
 
-interface UserEmail {
-  email: string;
-}
-
 const user = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
     // endast tillåtet om man är inloggad
@@ -38,10 +35,18 @@ const user = async (req: NextApiRequest, res: NextApiResponse) => {
       return;
     }
 
-    const { email } = req.query as unknown as UserEmail;
-
     try {
-      const result = await getUser(email);
+      const emailSchema = z.string().email();
+
+      const parsedEmail = emailSchema.safeParse(req.query.email);
+
+      if (!parsedEmail.success) {
+        console.log(req.query);
+        console.log(parsedEmail.error);
+        throw new Error('Invalid key.');
+      }
+
+      const result = await getUser(parsedEmail.data);
       res.status(200).json(result);
     } catch (error) {
       console.error(error);

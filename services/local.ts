@@ -374,7 +374,10 @@ export const updateUser = async (user: User): Promise<ResponseType<User>> => {
   const options = {
     method: 'PATCH',
     headers: defaultHeaders,
-    body: JSON.stringify({ user })
+    body: JSON.stringify({
+      settingVisibility: user.settingVisibility,
+      receiveReminders: user.receiveReminders
+    })
   };
 
   try {

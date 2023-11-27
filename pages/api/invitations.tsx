@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
 import { getUser } from 'services/authorization';
+import { z } from 'zod';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -62,16 +63,32 @@ const invitations = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
     // endast tillåtet om man är inloggad
     const loggedInUser = await getUser(req, res);
-    if (loggedInUser === null) {
+    if (
+      loggedInUser === null ||
+      loggedInUser?.sub === undefined ||
+      loggedInUser?.sub === null
+    ) {
       res.status(401).end();
       await prisma.$disconnect();
       return;
     }
 
     try {
+      const invitationSchema = z.object({
+        email: z.string().email(),
+        sub: z.string()
+      });
+
+      const parsedInvitation = invitationSchema.safeParse(req.query);
+
+      if (!parsedInvitation.success) {
+        console.log(parsedInvitation.error);
+        throw new Error('Invalid key.');
+      }
+
       const result = await getUpdatedInvitations(
-        req.query.email as string,
-        req.query.sub as string
+        parsedInvitation.data.email,
+        parsedInvitation.data.sub
       );
       res.status(200).json(result);
     } catch (error) {
