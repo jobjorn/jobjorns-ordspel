@@ -4,6 +4,8 @@ import {
   CircularProgress,
   Container,
   List,
+  ListItemButton,
+  ListItemText,
   ListSubheader,
   Typography
 } from '@mui/material';
@@ -16,6 +18,7 @@ import { GameListRefusal } from './GameListRefusal';
 import Head from 'next/head';
 import { faviconString } from 'services/helpers';
 import { GameListFinished } from './GameListFinished';
+import { ExpandLess, ExpandMore } from '@mui/icons-material';
 
 export const GameList: React.FC<{}> = () => {
   const [loading, setLoading] = useState(true);
@@ -36,7 +39,12 @@ export const GameList: React.FC<{}> = () => {
   const [updatedInvitationsToggle, setUpdatedInvitationsToggle] =
     useState<boolean>(false);
 
+  const [showInactive, setShowInactive] = useState<boolean>(false);
+  const [showOlderFinished, setShowOlderFinished] = useState<boolean>(false);
+
   const { user } = useUser();
+
+  const inactiveDate = new Date(new Date().setMonth(new Date().getMonth() - 1));
 
   useEffect(() => {
     const fetchGamesList = async () => {
@@ -120,6 +128,17 @@ export const GameList: React.FC<{}> = () => {
     setGamesList(newGamesList);
   };
 
+  const archiveFinishedGame = (gameId: number) => {
+    const updatedGamesList = gamesList.map((game) => {
+      if (game.gameId === gameId) {
+        return { ...game, finishedDismissed: true };
+      }
+      return game;
+    });
+
+    setGamesList(updatedGamesList);
+  };
+
   if (gamesList.length == 0 && !loading) {
     return (
       <Container maxWidth="sm">
@@ -186,8 +205,8 @@ export const GameList: React.FC<{}> = () => {
               {gamesListFinishedNotDismissed.map((game) => (
                 <GameListFinished
                   key={game.game.id}
-                  game={game.game}
-                  removeGameFromList={removeGameFromList}
+                  game={game}
+                  archiveFinishedGame={archiveFinishedGame}
                 />
               ))}
             </List>
@@ -216,9 +235,27 @@ export const GameList: React.FC<{}> = () => {
                   Väntar på andras drag
                 </ListSubheader>
               )}
-              {gamesListWaiting.map((game) => (
-                <GameListListItem key={game.game.id} game={game.game} />
-              ))}
+              {gamesListWaiting
+                .filter((game) => new Date(game.statusTime) > inactiveDate)
+                .map((game) => (
+                  <GameListListItem key={game.game.id} game={game.game} />
+                ))}
+
+              {gamesListWaiting.filter(
+                (game) => new Date(game.statusTime) < inactiveDate
+              ).length > 0 && (
+                <ListItemButton onClick={() => setShowInactive(!showInactive)}>
+                  <ListItemText primary="Visa inaktiva spel" />
+                  {showInactive ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+              )}
+
+              {showInactive &&
+                gamesListWaiting
+                  .filter((game) => new Date(game.statusTime) < inactiveDate)
+                  .map((game) => (
+                    <GameListListItem key={game.game.id} game={game.game} />
+                  ))}
             </List>
           </>
         )}
@@ -229,13 +266,37 @@ export const GameList: React.FC<{}> = () => {
               Avslutade spel
             </Typography>
             <List>
-              {gamesListFinished.map((game) => (
-                <GameListFinished
-                  key={game.game.id}
-                  game={game.game}
-                  removeGameFromList={removeGameFromList}
-                />
-              ))}
+              {gamesListFinished
+                .filter((game) => new Date(game.statusTime) > inactiveDate)
+                .map((game) => (
+                  <GameListFinished
+                    key={game.game.id}
+                    game={game}
+                    archiveFinishedGame={archiveFinishedGame}
+                  />
+                ))}
+
+              {gamesListFinished.filter(
+                (game) => new Date(game.statusTime) < inactiveDate
+              ).length > 0 && (
+                <ListItemButton
+                  onClick={() => setShowOlderFinished(!showOlderFinished)}
+                >
+                  <ListItemText primary="Visa äldre spel" />
+                  {showOlderFinished ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+              )}
+
+              {showOlderFinished &&
+                gamesListFinished
+                  .filter((game) => new Date(game.statusTime) < inactiveDate)
+                  .map((game) => (
+                    <GameListFinished
+                      key={game.game.id}
+                      game={game}
+                      archiveFinishedGame={archiveFinishedGame}
+                    />
+                  ))}
             </List>
           </>
         )}

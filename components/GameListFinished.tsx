@@ -21,10 +21,10 @@ import { dismissFinished } from 'services/local';
 
 export const GameListFinished = ({
   game,
-  removeGameFromList
+  archiveFinishedGame
 }: {
-  game: GameListData['game'];
-  removeGameFromList: (gameId: number) => void;
+  game: GameListData;
+  archiveFinishedGame: (gameId: number) => void;
 }) => {
   const [fade, setFade] = React.useState(false);
 
@@ -34,9 +34,9 @@ export const GameListFinished = ({
   const handleDismissFinished = () => {
     if (user && user.sub) {
       setFade(true);
-      dismissFinished(game.id, user.sub);
+      dismissFinished(game.game.id, user.sub);
       setTimeout(() => {
-        removeGameFromList(game.id);
+        archiveFinishedGame(game.game.id);
       }, 1100);
     }
   };
@@ -44,17 +44,15 @@ export const GameListFinished = ({
   if (game) {
     let playersList = '';
     let winner: GameListData['game']['users'][0] | undefined;
-    let dismissed = false;
-    game.users.forEach((player) => {
+    let dismissed = game.finishedDismissed;
+
+    game.game.users.forEach((player) => {
       if (player.userSub !== user.sub) {
         if (playersList.length == 0) {
           playersList = player.user.name;
         } else {
           playersList += ', ' + player.user.name;
         }
-      }
-      if (player.userSub === user.sub) {
-        dismissed = player.finishedDismissed;
       }
       if (!winner) {
         winner = player;
@@ -70,12 +68,12 @@ export const GameListFinished = ({
     }
 
     let endTimeString = DateTime.fromISO(
-      new Date(game.users[0].statusTime).toISOString()
+      new Date(game.game.users[0].statusTime).toISOString()
     )
       .setLocale('sv')
       .toRelative({ style: 'long' });
 
-    game.invitations.forEach((invitation) => {
+    game.game.invitations.forEach((invitation) => {
       if (playersList.length == 0) {
         playersList = invitation.email;
       } else {
@@ -85,11 +83,11 @@ export const GameListFinished = ({
 
     return (
       <FadeWrapper fade={fade} disableGutters>
-        <Link passHref href={`/game/${game.id}`} style={{ flexGrow: 1 }}>
+        <Link passHref href={`/game/${game.game.id}`} style={{ flexGrow: 1 }}>
           <ListItemButton sx={{ p: 1, m: -1 }}>
             <ListItemAvatar sx={{ pr: 1, minWidth: '100px' }}>
               <AvatarGroup max={4} spacing={28}>
-                {game.users.map(
+                {game.game.users.map(
                   (player, index) =>
                     user.sub !== player.userSub && (
                       <Avatar
@@ -99,7 +97,7 @@ export const GameListFinished = ({
                       />
                     )
                 )}
-                {game.invitations.map((invitation, index) => (
+                {game.game.invitations.map((invitation, index) => (
                   <Avatar
                     sx={{ zIndex: 100 + index }}
                     key={100 + index}
