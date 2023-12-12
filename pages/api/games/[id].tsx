@@ -427,7 +427,7 @@ const submitMove = async (
 
     if (gameEnded) {
       // om spelet tagit slut, markera alla spelare som FINISHED
-      prisma.usersOnGames.updateMany({
+      await prisma.usersOnGames.updateMany({
         where: {
           gameId: gameId
         },
