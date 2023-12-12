@@ -1,17 +1,17 @@
 import React from 'react';
 import {
   Button,
-  ListItem,
+  ListItemAvatar,
   ListItemText,
   Skeleton,
   Stack,
-  Typography,
-  styled
+  Typography
 } from '@mui/material';
 import { GameListData } from 'types/types';
 import { dismissRefusal } from 'services/local';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { DateTime } from 'luxon';
+import { FadeWrapper } from './FadeWrapper';
 
 export const GameListRefusal = ({
   game,
@@ -44,6 +44,7 @@ export const GameListRefusal = ({
 
     return (
       <FadeWrapper fade={fade} disableGutters>
+        <ListItemAvatar sx={{ pr: 1, minWidth: '100px' }}></ListItemAvatar>
         <ListItemText
           disableTypography
           primary={<Typography>Alla inbjudna spelare tackade nej</Typography>}
@@ -96,14 +97,3 @@ export const GameListRefusal = ({
     );
   }
 };
-
-type FadeWrapperProps = {
-  fade: boolean;
-};
-
-const FadeWrapper = styled(ListItem, {
-  shouldForwardProp: (prop) => prop !== 'fade'
-})<FadeWrapperProps>((props) => ({
-  opacity: props.fade ? 0 : 1,
-  transition: 'opacity 1s ease-in-out'
-}));

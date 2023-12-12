@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
+import { getUser as getAuthedUser } from 'services/authorization';
+import { z } from 'zod';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -23,34 +25,39 @@ const getUser = async (email: string) => {
   }
 };
 
-interface UserEmail {
-  email: string;
-}
-
-const user = async (
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<void> => {
+const user = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
-    const { email } = req.query as unknown as UserEmail;
+    // endast tillåtet om man är inloggad
+    const loggedInUser = await getAuthedUser(req, res);
+    if (loggedInUser === null) {
+      res.status(401).end();
+      await prisma.$disconnect();
+      return;
+    }
 
-    return new Promise((resolve) => {
-      getUser(email)
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    try {
+      const emailSchema = z.string().email();
+
+      const parsedEmail = emailSchema.safeParse(req.query.email);
+
+      if (!parsedEmail.success) {
+        console.log(req.query);
+        console.log(parsedEmail.error);
+        throw new Error('Invalid key.');
+      }
+
+      const result = await getUser(parsedEmail.data);
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).end('Något gick fel.');
+    }
   } else {
     res.status(404).end();
   }
+
+  await prisma.$disconnect();
+  return;
 };
 
 export default user;

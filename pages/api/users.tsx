@@ -1,60 +1,53 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
 import { startGame } from './games';
-
-interface User {
-  sub: string;
-  name: string;
-  picture: string;
-  email: string;
-}
+import { getUser } from 'services/authorization';
+import { UserFromAuth0Input, UserFromAuth0InputSchema } from 'types/types';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
 });
 
-const addUser = async (user: User) => {
+const addUser = async (user: UserFromAuth0Input) => {
   try {
     const findSingleUser = await prisma.user.findUnique({
       where: { sub: user.sub }
     });
-
-    if (findSingleUser === null) {
-      const createResult = await prisma.user.create({
-        data: {
-          sub: user.sub,
-          name: user.name,
-          email: user.email,
-          picture: user.picture
-        }
-      });
-      if (createResult !== null) {
-        // Add an invitation from the creator to the new user
-        const starter = 'google-oauth2|104137162787605911168';
-        const createGame = startGame(starter, [createResult], []);
-        if (createGame !== null) {
-          return { message: `Spelet skapades` };
-        } else {
-          throw new Error(
-            'Något gick fel i skapandet av spelomgång, createResult var null'
-          );
-        }
-
-        return { message: `Användaren ${user.name} skapades` };
-      } else {
-        return { message: 'Något gick fel i skapandet av användare' };
-      }
-    } else {
+    if (findSingleUser !== null) {
       return { message: 'Användaren finns redan' };
     }
+
+    const createResult = await prisma.user.create({
+      data: {
+        sub: user.sub,
+        name: user.name,
+        email: user.email,
+        picture: user.picture
+      }
+    });
+
+    // Add an invitation from the creator to the new user
+    const starter = process.env.CREATOR_SUB;
+    if (!starter) throw new Error('No CREATOR_SUB env variable');
+
+    startGame(starter, [createResult], []);
+
+    return { message: `Spel skapades med användaren ${user.name}` };
   } catch (error) {
     return { message: 'Det blev ett error: ' + error };
   }
 };
 
 const listUsers = async () => {
+  // används i dagsläget endast på "Nytt spel"-sidan
+  // datat är därför begränsat till name, picture, sub där settingVisibility är true
   try {
     const listUsersPrisma = await prisma.user.findMany({
+      select: {
+        name: true,
+        picture: true,
+        sub: true
+      },
       where: {
         settingVisibility: true
       },
@@ -62,7 +55,8 @@ const listUsers = async () => {
         name: 'asc'
       }
     });
-    if (listUsersPrisma === null) {
+
+    if (listUsersPrisma.length === 0) {
       return { message: 'Inga användare returnerades' };
     } else {
       return {
@@ -75,50 +69,47 @@ const listUsers = async () => {
   }
 };
 
-const users = async (
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<void> => {
+const users = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
-    return new Promise((resolve) => {
-      const { sub, name, picture, email }: User = req.body;
+    // OBS: denna kallas tidvis från Auth0
+    try {
+      const parsedInputUser = UserFromAuth0InputSchema.safeParse(req.body);
+      if (!parsedInputUser.success) {
+        throw new Error(parsedInputUser.error.message);
+      }
 
-      addUser({
-        sub,
-        name,
-        picture,
-        email
-      })
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+      const result = await addUser(parsedInputUser.data);
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).end('Något gick fel.');
+    }
   } else if (req.method === 'GET') {
-    return new Promise((resolve) => {
-      listUsers()
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    // endast tillåtet om man är inloggad
+    const loggedInUser = await getUser(req, res);
+    if (
+      loggedInUser === null ||
+      loggedInUser?.sub === undefined ||
+      loggedInUser?.sub === null
+    ) {
+      res.status(401).end();
+      await prisma.$disconnect();
+      return;
+    }
+
+    try {
+      const result = await listUsers();
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).end('Något gick fel.');
+    }
   } else {
     res.status(404).end();
   }
+
+  await prisma.$disconnect();
+  return;
 };
 
 export default users;

@@ -4,6 +4,8 @@ import {
   CircularProgress,
   Container,
   List,
+  ListItemButton,
+  ListItemText,
   ListSubheader,
   Typography
 } from '@mui/material';
@@ -15,6 +17,8 @@ import { GameInviteListItem } from './GameListInvite';
 import { GameListRefusal } from './GameListRefusal';
 import Head from 'next/head';
 import { faviconString } from 'services/helpers';
+import { GameListFinished } from './GameListFinished';
+import { ExpandLess, ExpandMore } from '@mui/icons-material';
 
 export const GameList: React.FC<{}> = () => {
   const [loading, setLoading] = useState(true);
@@ -24,6 +28,8 @@ export const GameList: React.FC<{}> = () => {
   const [gamesListRefusals, setGamesListRefusals] = useState<GameListData[]>(
     []
   );
+  const [gamesListFinishedNotDismissed, setGamesListFinishedNotDismissed] =
+    useState<GameListData[]>([]);
   const [gamesListWaiting, setGamesListWaiting] = useState<GameListData[]>([]);
   const [gamesListReady, setGamesListReady] = useState<GameListData[]>([]);
   const [gamesListFinished, setGamesListFinished] = useState<GameListData[]>(
@@ -33,7 +39,12 @@ export const GameList: React.FC<{}> = () => {
   const [updatedInvitationsToggle, setUpdatedInvitationsToggle] =
     useState<boolean>(false);
 
+  const [showInactive, setShowInactive] = useState<boolean>(false);
+  const [showOlderFinished, setShowOlderFinished] = useState<boolean>(false);
+
   const { user } = useUser();
+
+  const inactiveDate = new Date(new Date().setMonth(new Date().getMonth() - 1));
 
   useEffect(() => {
     const fetchGamesList = async () => {
@@ -74,13 +85,16 @@ export const GameList: React.FC<{}> = () => {
   useEffect(() => {
     if (user && user.sub && gamesList.length > 0) {
       let newGamesListInvites: GameListData[] = [];
+      let newGamesListFinishedNotDismissed: GameListData[] = [];
       let newGamesListRefusals: GameListData[] = [];
       let newGamesListReady: GameListData[] = [];
       let newGamesListWaiting: GameListData[] = [];
       let newGamesListFinished: GameListData[] = [];
 
       gamesList.map((game) => {
-        if (game.status == 'FINISHED') {
+        if (game.status == 'FINISHED' && game.finishedDismissed == false) {
+          newGamesListFinishedNotDismissed.push(game);
+        } else if (game.status == 'FINISHED') {
           newGamesListFinished.push(game);
         } else if (game.status == 'INVITED') {
           newGamesListInvites.push(game);
@@ -95,6 +109,7 @@ export const GameList: React.FC<{}> = () => {
 
       setGamesListInvites(newGamesListInvites);
       setGamesListRefusals(newGamesListRefusals);
+      setGamesListFinishedNotDismissed(newGamesListFinishedNotDismissed);
       setGamesListWaiting(newGamesListWaiting);
       setGamesListReady(newGamesListReady);
       setGamesListFinished(newGamesListFinished);
@@ -111,6 +126,17 @@ export const GameList: React.FC<{}> = () => {
     const newGamesList = gamesList.filter((game) => game.gameId != gameId);
 
     setGamesList(newGamesList);
+  };
+
+  const archiveFinishedGame = (gameId: number) => {
+    const updatedGamesList = gamesList.map((game) => {
+      if (game.gameId === gameId) {
+        return { ...game, finishedDismissed: true };
+      }
+      return game;
+    });
+
+    setGamesList(updatedGamesList);
   };
 
   if (gamesList.length == 0 && !loading) {
@@ -135,72 +161,145 @@ export const GameList: React.FC<{}> = () => {
             )}
           </Head>
         )}
+
         {gamesListInvites.length > 0 && (
-          <Typography variant="h4" sx={{}}>
-            Inbjudningar
-          </Typography>
+          <>
+            <Typography variant="h4" sx={{}}>
+              Inbjudningar
+            </Typography>
+            <List>
+              {gamesListInvites.map((game) => (
+                <GameInviteListItem
+                  key={game.game.id}
+                  game={game.game}
+                  removeGameFromList={removeGameFromList}
+                />
+              ))}
+            </List>
+          </>
         )}
-        <List>
-          {gamesListInvites.map((game) => (
-            <GameInviteListItem
-              key={game.game.id}
-              game={game.game}
-              removeGameFromList={removeGameFromList}
-            />
-          ))}
-        </List>
 
         {gamesListRefusals.length > 0 && (
-          <Typography variant="h4" sx={{}}>
-            Avvisade inbjudningar
-          </Typography>
+          <>
+            <Typography variant="h4" sx={{}}>
+              Avvisade inbjudningar
+            </Typography>
+            <List>
+              {gamesListRefusals.map((game) => (
+                <GameListRefusal
+                  key={game.game.id}
+                  game={game.game}
+                  removeGameFromList={removeGameFromList}
+                />
+              ))}
+            </List>
+          </>
         )}
-        <List>
-          {gamesListRefusals.map((game) => (
-            <GameListRefusal
-              key={game.game.id}
-              game={game.game}
-              removeGameFromList={removeGameFromList}
-            />
-          ))}
-        </List>
+
+        {gamesListFinishedNotDismissed.length > 0 && (
+          <>
+            <Typography variant="h4" sx={{}}>
+              Nyligen avslutade spel
+            </Typography>
+            <List>
+              {gamesListFinishedNotDismissed.map((game) => (
+                <GameListFinished
+                  key={game.game.id}
+                  game={game}
+                  archiveFinishedGame={archiveFinishedGame}
+                />
+              ))}
+            </List>
+          </>
+        )}
 
         {(gamesListReady.length > 0 || gamesListWaiting.length > 0) && (
-          <Typography variant="h4" sx={{}}>
-            Pågående spel
-          </Typography>
+          <>
+            <Typography variant="h4" sx={{}}>
+              Pågående spel
+            </Typography>
+
+            <List>
+              {gamesListReady.length > 0 && (
+                <ListSubheader style={{ zIndex: 200 }}>
+                  Väntar på ditt drag
+                </ListSubheader>
+              )}
+
+              {gamesListReady.map((game) => (
+                <GameListListItem key={game.game.id} game={game.game} />
+              ))}
+
+              {gamesListWaiting.length > 0 && (
+                <ListSubheader style={{ zIndex: 200 }}>
+                  Väntar på andras drag
+                </ListSubheader>
+              )}
+              {gamesListWaiting
+                .filter((game) => new Date(game.statusTime) > inactiveDate)
+                .map((game) => (
+                  <GameListListItem key={game.game.id} game={game.game} />
+                ))}
+
+              {gamesListWaiting.filter(
+                (game) => new Date(game.statusTime) < inactiveDate
+              ).length > 0 && (
+                <ListItemButton onClick={() => setShowInactive(!showInactive)}>
+                  <ListItemText primary="Visa inaktiva spel" />
+                  {showInactive ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+              )}
+
+              {showInactive &&
+                gamesListWaiting
+                  .filter((game) => new Date(game.statusTime) < inactiveDate)
+                  .map((game) => (
+                    <GameListListItem key={game.game.id} game={game.game} />
+                  ))}
+            </List>
+          </>
         )}
-        <List>
-          {gamesListReady.length > 0 && (
-            <ListSubheader style={{ zIndex: 200 }}>
-              Väntar på ditt drag
-            </ListSubheader>
-          )}
-
-          {gamesListReady.map((game) => (
-            <GameListListItem key={game.game.id} game={game.game} />
-          ))}
-
-          {gamesListWaiting.length > 0 && (
-            <ListSubheader style={{ zIndex: 200 }}>
-              Väntar på andras drag
-            </ListSubheader>
-          )}
-          {gamesListWaiting.map((game) => (
-            <GameListListItem key={game.game.id} game={game.game} />
-          ))}
-        </List>
 
         {gamesListFinished.length > 0 && (
-          <Typography variant="h4" sx={{}}>
-            Avslutade spel
-          </Typography>
+          <>
+            <Typography variant="h4" sx={{}}>
+              Avslutade spel
+            </Typography>
+            <List>
+              {gamesListFinished
+                .filter((game) => new Date(game.statusTime) > inactiveDate)
+                .map((game) => (
+                  <GameListFinished
+                    key={game.game.id}
+                    game={game}
+                    archiveFinishedGame={archiveFinishedGame}
+                  />
+                ))}
+
+              {gamesListFinished.filter(
+                (game) => new Date(game.statusTime) < inactiveDate
+              ).length > 0 && (
+                <ListItemButton
+                  onClick={() => setShowOlderFinished(!showOlderFinished)}
+                >
+                  <ListItemText primary="Visa äldre spel" />
+                  {showOlderFinished ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+              )}
+
+              {showOlderFinished &&
+                gamesListFinished
+                  .filter((game) => new Date(game.statusTime) < inactiveDate)
+                  .map((game) => (
+                    <GameListFinished
+                      key={game.game.id}
+                      game={game}
+                      archiveFinishedGame={archiveFinishedGame}
+                    />
+                  ))}
+            </List>
+          </>
         )}
-        <List>
-          {gamesListFinished.map((game) => (
-            <GameListListItem key={game.game.id} game={game.game} />
-          ))}
-        </List>
       </Container>
     );
   } else {

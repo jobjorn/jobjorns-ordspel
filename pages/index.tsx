@@ -8,13 +8,19 @@ import { Footer } from 'components/Footer';
 import { Splash } from 'components/Splash';
 import Head from 'next/head';
 import { faviconString } from 'services/helpers';
-import { Loading } from 'components/Loading';
 
 const IndexPage: NextPage<{}> = () => {
   const { user, isLoading } = useUser(); // härifrån finns också error att ta ut
 
   if (isLoading) {
-    return <Loading />;
+    return (
+      <>
+        <Head>
+          <title>Ordbjörn</title>
+        </Head>
+        <Splash />
+      </>
+    );
   }
 
   return (

@@ -2,9 +2,10 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient, User } from '@prisma/client';
 import sendgrid from '@sendgrid/mail';
 import he from 'he';
-import { GameListData } from 'types/types';
+import { GameListData, UserListData } from 'types/types';
 import { getUser } from 'services/authorization';
 import { shuffleStartLetters } from 'services/game';
+import { z } from 'zod';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -12,7 +13,7 @@ const prisma = new PrismaClient({
 
 export const startGame = async (
   starter: User['sub'],
-  players: User[],
+  players: UserListData[],
   emailList: string[]
 ) => {
   let newPlayers = players.map((player) => player.sub);
@@ -161,59 +162,75 @@ const listGames = async (userSub: string) => {
   }
 };
 
-interface PostRequestBody {
-  starter: User;
-  players: User[];
-  emailList: string[];
-}
+const games = async (req: NextApiRequest, res: NextApiResponse) => {
+  // endast tillåtet om man är inloggad
+  const loggedInUser = await getUser(req, res);
+  if (
+    loggedInUser === null ||
+    loggedInUser?.sub === undefined ||
+    loggedInUser?.sub === null
+  ) {
+    res.status(401).end();
+    await prisma.$disconnect();
+    return;
+  }
 
-const games = async (
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<void> => {
   if (req.method === 'POST') {
-    return new Promise(async (resolve) => {
-      const { players, emailList }: PostRequestBody = req.body;
-
-      const loggedInUser = await getUser(req, res);
-      const loggedInUserSub = loggedInUser?.sub;
-
-      if (!loggedInUserSub || (!players && !emailList)) {
-        res.status(400).end('Players saknas');
-        resolve();
-      } else {
-        startGame(loggedInUserSub, players, emailList)
-          .then((result) => {
-            res.status(200).json(result);
-            resolve();
+    try {
+      const newGameSchema = z.object({
+        players: z.array(
+          z.object({
+            name: z.string(),
+            sub: z.string(),
+            picture: z.string().nullable()
           })
-          .catch((error) => {
-            res.status(500).end(error);
-            resolve();
-          })
-          .finally(async () => {
-            await prisma.$disconnect();
-          });
+        ),
+        emailList: z.array(z.string())
+      });
+      const parsedNewGame = newGameSchema.safeParse(req.body);
+
+      if (!parsedNewGame.success) {
+        console.log(parsedNewGame.error);
+        throw new Error('Invalid key.');
       }
-    });
+
+      if (!parsedNewGame.data.players && !parsedNewGame.data.emailList) {
+        throw new Error('Players/emaillist saknas.');
+      }
+
+      const result = await startGame(
+        loggedInUser.sub,
+        parsedNewGame.data.players,
+        parsedNewGame.data.emailList
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).end('Något gick fel.');
+    }
   } else if (req.method === 'GET') {
-    return new Promise((resolve) => {
-      listGames(req.query.usersub as string)
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+    try {
+      const userSubSchema = z.string();
+
+      const parsedUserSub = userSubSchema.safeParse(req.query.usersub);
+
+      if (!parsedUserSub.success) {
+        console.log(parsedUserSub.error);
+        throw new Error('Invalid key.');
+      }
+
+      const result = await listGames(parsedUserSub.data);
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).end('Något gick fel.');
+    }
   } else {
     res.status(404).end();
   }
+
+  await prisma.$disconnect();
+  return;
 };
 
 export default games;

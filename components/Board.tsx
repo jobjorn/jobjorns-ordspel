@@ -286,17 +286,15 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
           return cell;
         })
       );
-      const currentBoard = JSON.stringify(submittedBoard);
 
       let moveResult = await submitMove(
         game.id,
-        currentUser.sub, // sub?
         game.currentTurn,
         playedWords,
-        currentBoard
+        submittedBoard
       );
 
-      if (moveResult.move.success) {
+      if (moveResult.success) {
         setUnplayedBoard(submittedBoard);
         setPlacedTiles([]);
         setAlerts([
@@ -309,8 +307,8 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
         setAlerts([
           {
             severity: 'error',
-            message: moveResult.move.message
-              ? moveResult.move.message
+            message: moveResult.message
+              ? moveResult.message
               : 'Något gick fel. Försök igen.'
           }
         ]);
@@ -361,12 +359,11 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
 
     let moveResult = await submitMove(
       game.id,
-      currentUser.sub,
       game.currentTurn,
       '',
-      JSON.stringify(copiedBoard)
+      copiedBoard
     );
-    if (moveResult.move.success) {
+    if (moveResult.success) {
       setUnplayedBoard(copiedBoard);
       setPlacedTiles([]);
       setAlerts([
@@ -379,8 +376,8 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
       setAlerts([
         {
           severity: 'error',
-          message: moveResult.move.message
-            ? moveResult.move.message
+          message: moveResult.message
+            ? moveResult.message
             : 'Något gick fel. Försök igen.'
         }
       ]);

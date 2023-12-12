@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -23,30 +24,30 @@ const updateRemindersSetting = async (key: string) => {
   }
 };
 
-const turnOffReminders = async (
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<void> => {
+const turnOffReminders = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'PATCH') {
-    return new Promise(async (resolve) => {
-      const key: string = req.body.key;
+    try {
+      const keySchema = z.string().uuid();
 
-      updateRemindersSetting(key)
-        .then((result) => {
-          res.status(200).json(result);
-          resolve();
-        })
-        .catch((error) => {
-          res.status(500).end(error);
-          resolve();
-        })
-        .finally(async () => {
-          await prisma.$disconnect();
-        });
-    });
+      const parsedKey = keySchema.safeParse(req.body.key);
+
+      if (!parsedKey.success) {
+        console.log(parsedKey.error);
+        throw new Error('Invalid key.');
+      }
+
+      const result = await updateRemindersSetting(parsedKey.data);
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).end('Något gick fel.');
+    }
   } else {
     res.status(404).end();
   }
+
+  await prisma.$disconnect();
+  return;
 };
 
 export default turnOffReminders;

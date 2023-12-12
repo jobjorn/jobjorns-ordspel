@@ -1,5 +1,6 @@
 import { AlertColor } from '@mui/material';
 import { Prisma } from '@prisma/client';
+import { z } from 'zod';
 
 export interface Tile {
   letter: string;
@@ -65,3 +66,20 @@ export type GameListData = Prisma.UsersOnGamesGetPayload<{
     };
   };
 }>;
+
+export type UserListData = Prisma.UserGetPayload<{
+  select: {
+    name: true;
+    picture: true;
+    sub: true;
+  };
+}>;
+
+export const UserFromAuth0InputSchema = z.object({
+  sub: z.string().min(3),
+  name: z.string(),
+  picture: z.string().url(),
+  email: z.string().email()
+});
+
+export type UserFromAuth0Input = z.infer<typeof UserFromAuth0InputSchema>;

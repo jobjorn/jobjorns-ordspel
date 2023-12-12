@@ -43,14 +43,16 @@ model Game {
 }
 
 model UsersOnGames {
-  user         User     @relation(fields: [userSub], references: [sub])
-  userSub      String // relation scalar field
-  userAccepted Boolean  @default(false)
-  game         Game     @relation(fields: [gameId], references: [id])
-  gameId       Int // relation scalar field
-  createdAt    DateTime @default(now())
-  status       Status   @default(DEFAULT)
-  statusTime   DateTime @default(now())
+  user              User     @relation(fields: [userSub], references: [sub])
+  userSub           String // relation scalar field
+  userAccepted      Boolean  @default(false)
+  game              Game     @relation(fields: [gameId], references: [id])
+  gameId            Int // relation scalar field
+  createdAt         DateTime @default(now())
+  status            Status   @default(DEFAULT)
+  statusTime        DateTime @default(now())
+  points            Int      @default(0)
+  finishedDismissed Boolean  @default(false)
 
   @@id([userSub, gameId])
 }

@@ -1,7 +1,15 @@
-import { UserProfile } from '@auth0/nextjs-auth0/client';
 import { Invitation, User } from '@prisma/client';
 import router from 'next/router';
-import { ResponseType, GameWithEverything, GameListData } from 'types/types';
+import {
+  ResponseType,
+  GameWithEverything,
+  GameListData,
+  UserListData,
+  Tile
+} from 'types/types';
+
+/*
+används ej längre, addUser körs från Auth0 numera
 
 export const addUser = (user: UserProfile) => {
   const defaultHeaders = {
@@ -34,6 +42,7 @@ export const addUser = (user: UserProfile) => {
       console.error(error);
     });
 };
+*/
 
 export const getUser = (email: string): Promise<ResponseType<User>> => {
   const defaultHeaders = {
@@ -67,7 +76,7 @@ export const getUser = (email: string): Promise<ResponseType<User>> => {
     });
 };
 
-export const listUsers = (): Promise<ResponseType<User[]>> => {
+export const listUsers = (): Promise<ResponseType<UserListData[]>> => {
   const defaultHeaders = {
     Accept: 'application/json',
     'Content-Type': 'application/json;charset=UTF-8'
@@ -99,7 +108,7 @@ export const listUsers = (): Promise<ResponseType<User[]>> => {
     });
 };
 
-export const startGame = (players: User[], emailList: string[]) => {
+export const startGame = (players: UserListData[], emailList: string[]) => {
   const defaultHeaders = {
     Accept: 'application/json',
     'Content-Type': 'application/json;charset=UTF-8'
@@ -200,10 +209,9 @@ export const listGames = (
 
 export const submitMove = async (
   gameId: number,
-  userSub: string,
   turnNumber: number,
   playedWord: string,
-  playedBoard: string
+  playedBoard: Tile[][]
 ) => {
   const defaultHeaders = {
     Accept: 'application/json',
@@ -215,7 +223,6 @@ export const submitMove = async (
     headers: defaultHeaders,
     body: JSON.stringify({
       variant: 'move',
-      userSub,
       turnNumber,
       playedWord,
       playedBoard
@@ -224,13 +231,9 @@ export const submitMove = async (
 
   try {
     const moveResult = await (await fetch(url, options)).json();
-
-    return { move: moveResult };
+    return moveResult;
   } catch (error) {
-    return {
-      move: { success: false, response: error },
-      turn: { success: false, response: error }
-    };
+    return { success: false as const, message: 'Något gick fel!' };
   }
 };
 
@@ -289,7 +292,30 @@ export const dismissRefusal = async (gameId: number, userSub: string) => {
   const options = {
     method: 'POST',
     headers: defaultHeaders,
-    body: JSON.stringify({ variant: 'dismiss', userSub })
+    body: JSON.stringify({ variant: 'dismissRefusal', userSub })
+  };
+
+  try {
+    const dismissResult = await (await fetch(url, options)).json();
+
+    return { dismiss: dismissResult };
+  } catch (error) {
+    return {
+      dismiss: { success: false, response: error }
+    };
+  }
+};
+
+export const dismissFinished = async (gameId: number, userSub: string) => {
+  const defaultHeaders = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json;charset=UTF-8'
+  };
+  const url = '/api/games/' + gameId;
+  const options = {
+    method: 'POST',
+    headers: defaultHeaders,
+    body: JSON.stringify({ variant: 'dismissFinished', userSub })
   };
 
   try {
@@ -348,7 +374,10 @@ export const updateUser = async (user: User): Promise<ResponseType<User>> => {
   const options = {
     method: 'PATCH',
     headers: defaultHeaders,
-    body: JSON.stringify({ user })
+    body: JSON.stringify({
+      settingVisibility: user.settingVisibility,
+      receiveReminders: user.receiveReminders
+    })
   };
 
   try {
