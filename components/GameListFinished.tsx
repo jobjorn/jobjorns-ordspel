@@ -64,6 +64,11 @@ export const GameListFinished = ({
       }
     });
 
+    let winnerName = winner?.user.name;
+    if (winner?.userSub === user.sub) {
+      winnerName = 'Du';
+    }
+
     let endTimeString = DateTime.fromISO(
       new Date(game.users[0].statusTime).toISOString()
     )
@@ -118,7 +123,7 @@ export const GameListFinished = ({
                     {'Spelet tog slut ' +
                       endTimeString +
                       '. ' +
-                      winner?.user.name +
+                      winnerName +
                       ' vann!'}
                   </Typography>
                   {!dismissed && (
