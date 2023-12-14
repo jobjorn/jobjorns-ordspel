@@ -269,19 +269,6 @@ const submitMove = async (
       );
     }
 
-    await prisma.usersOnGames.update({
-      where: {
-        userSub_gameId: {
-          gameId: gameId,
-          userSub: userSub
-        }
-      },
-      data: {
-        status: 'OTHERTURN',
-        statusTime: new Date()
-      }
-    });
-
     let playersCount = game.data.users.length + game.data.invitations.length;
     let lastTurn = game.data.turns[0];
     lastTurn.moves.push(createMove); // lägg in draget vi just sparade
@@ -305,7 +292,20 @@ const submitMove = async (
     }
 
     if (!newTurn) {
-      // turen är inte slut. dags att säga hejdå
+      // turen är inte slut. dags att säga hejdå, efter att ha uppdaterat status
+
+      await prisma.usersOnGames.update({
+        where: {
+          userSub_gameId: {
+            gameId: gameId,
+            userSub: userSub
+          }
+        },
+        data: {
+          status: 'OTHERTURN',
+          statusTime: new Date()
+        }
+      });
 
       return {
         success: true,
@@ -433,6 +433,17 @@ const submitMove = async (
         },
         data: {
           status: 'FINISHED',
+          statusTime: new Date()
+        }
+      });
+    } else {
+      // om spelet fortsätter så är det ny tur för alla
+      await prisma.usersOnGames.updateMany({
+        where: {
+          gameId: gameId
+        },
+        data: {
+          status: 'YOURTURN',
           statusTime: new Date()
         }
       });
