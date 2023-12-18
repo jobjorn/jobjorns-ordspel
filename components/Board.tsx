@@ -5,6 +5,8 @@ import {
   Button,
   Container,
   LinearProgress,
+  Modal,
+  Paper,
   Stack,
   Tooltip,
   Typography,
@@ -53,6 +55,7 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
   const [playerHasSubmitted, setPlayerHasSubmitted] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<AlertType[]>([]);
   const [backdrop, setBackdrop] = useState<boolean>(false);
+  const [passModalOpen, setPassModalOpen] = useState<boolean>(false);
   const [shakingTiles, setShakingTiles] = useState<number[]>([]);
   const [placedTiles, setPlacedTiles] = useState<number[]>([]);
   const [currentPoints, setCurrentPoints] = useState<number>(0);
@@ -346,6 +349,9 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
     }
   };
 
+  const handleClosePassModal = () => setPassModalOpen(false);
+  const handleOpenPassModal = () => setPassModalOpen(true);
+
   const passTurn = async () => {
     setPlayerHasSubmitted(true);
     const copiedBoard = [...unplayedBoard];
@@ -393,6 +399,52 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
         margin: 0
       }}
     >
+      <Modal
+        open={passModalOpen}
+        onClose={handleClosePassModal}
+        sx={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        <Paper
+          sx={{
+            p: 3,
+            m: 3,
+            width: '100%',
+            maxWidth: '400px'
+          }}
+          variant="outlined"
+        >
+          <Typography variant="h4">Passa?</Typography>
+          <Typography variant="body1" sx={{ paddingBottom: 1 }}>
+            Om du passar så är ditt drag passerat och du får 0 poäng. Om alla
+            spelare passar avslutas spelet.
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              color="success"
+              onClick={() => {
+                handleClosePassModal();
+                passTurn();
+              }}
+            >
+              Ja, passa
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => handleClosePassModal()}
+            >
+              Nej, fortsätt utan att passa
+            </Button>
+          </Stack>
+        </Paper>
+      </Modal>
       <Backdrop
         sx={{
           color: '#fff',
@@ -502,7 +554,7 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
                 Rensa
               </Button>
             )}
-            <Button variant="outlined" onClick={() => passTurn()}>
+            <Button variant="outlined" onClick={() => handleOpenPassModal()}>
               Passa
             </Button>
             <Button variant="contained" onClick={() => submitWord()}>
