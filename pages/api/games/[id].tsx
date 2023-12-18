@@ -336,7 +336,7 @@ const submitMove = async (
     }
 
     // markera det vinnande draget som vunnet
-    prisma.move.update({
+    await prisma.move.update({
       where: {
         id: winningMove.id
       },
