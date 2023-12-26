@@ -365,7 +365,7 @@ const submitMove = async (
     // sedan en map som uppdaterar respektive spelares poäng
     if (newPoints.length > 0) {
       newPoints.map(async (newPoint) => {
-        prisma.usersOnGames.update({
+        await prisma.usersOnGames.update({
           where: {
             userSub_gameId: {
               gameId: gameId,

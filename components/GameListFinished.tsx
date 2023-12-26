@@ -57,7 +57,7 @@ export const GameListFinished = ({
       if (!winner) {
         winner = player;
       }
-      if (winner && winner.points < player.points) {
+      if (winner.points < player.points) {
         winner = player;
       }
     });
