@@ -13,6 +13,7 @@ model User {
   name              String
   email             String         @unique
   picture           String?
+  role              Role           @default(USER)
   settingVisibility Boolean        @default(true)
   games             UsersOnGames[]
   startedGames      Game[]
@@ -22,6 +23,12 @@ model User {
   lastReminded      DateTime?
 
   @@map("users")
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
 }
 
 model Game {

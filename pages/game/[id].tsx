@@ -56,7 +56,7 @@ const NewGamePage: NextPage<{}> = () => {
   if (game && userWithId) {
     let userInGame = game.users.findIndex((u) => u.userSub === userWithId.sub);
 
-    if (userInGame > -1) {
+    if (userInGame > -1 || userWithId.role === 'ADMIN') {
       return (
         <Box
           sx={{
