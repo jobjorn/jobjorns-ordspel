@@ -27,6 +27,9 @@ export const FinishedModal = ({
     []
   );
   const [tileCount, setTileCount] = useState(0);
+  const [positions, setPositions] = useState<
+    { userSub: string; position: number }[]
+  >([]);
 
   useEffect(() => {
     let newSortedUsers = game.users;
@@ -41,11 +44,31 @@ export const FinishedModal = ({
   }, [game.users, userPoints]);
 
   useEffect(() => {
+    let newPositions: { userSub: string; position: number }[] = [];
+    let previousPoint = -1;
+    let position = 1;
+
+    sortedUsers.map((user) => {
+      if (previousPoint !== user.points && previousPoint > 0) {
+        position++;
+      }
+      newPositions.push({
+        userSub: user.userSub,
+        position: position
+      });
+      previousPoint = user.points;
+    });
+
+    console.log(newPositions);
+    setPositions(newPositions);
+  }, [sortedUsers]);
+
+  useEffect(() => {
     let newTileCount = 104 - game.letters.replaceAll(',', '').length;
     setTileCount(newTileCount);
   }, [game.letters]);
 
-  const medalEmojis = ['🥇', '🥈', '🥉'];
+  const medalEmojis = ['', '🥇', '🥈', '🥉'];
 
   return (
     <>
@@ -57,7 +80,12 @@ export const FinishedModal = ({
         {sortedUsers.map((user, index) => (
           <ListItem
             key={index}
-            secondaryAction={medalEmojis[index] || ''}
+            secondaryAction={
+              medalEmojis[
+                positions.find((position) => position.userSub === user.userSub)
+                  ?.position || 0
+              ] || ''
+            }
             disableGutters
           >
             <ListItemAvatar>
