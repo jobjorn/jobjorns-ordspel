@@ -44,6 +44,7 @@ export const GameListFinished = ({
   if (game) {
     let playersList = '';
     let winner: GameListData['game']['users'][0] | undefined;
+    let draw = false;
     let dismissed = game.finishedDismissed;
 
     game.game.users.forEach((player) => {
@@ -56,15 +57,22 @@ export const GameListFinished = ({
       }
       if (!winner) {
         winner = player;
-      }
-      if (winner.points < player.points) {
-        winner = player;
+      } else {
+        if (winner.points < player.points) {
+          winner = player;
+          draw = false;
+        } else if (winner.points === player.points) {
+          draw = true;
+        }
       }
     });
 
-    let winnerName = winner?.user.name;
+    let winnerString = winner?.user.name + ' vann!';
     if (winner?.userSub === user.sub) {
-      winnerName = 'Du';
+      winnerString = 'Du vann!';
+    }
+    if (draw) {
+      winnerString = 'Det blev oavgjort!';
     }
 
     let endTimeString = DateTime.fromISO(
@@ -118,11 +126,7 @@ export const GameListFinished = ({
               secondary={
                 <>
                   <Typography variant="body2" color="text.secondary">
-                    {'Spelet tog slut ' +
-                      endTimeString +
-                      '. ' +
-                      winnerName +
-                      ' vann!'}
+                    {'Spelet tog slut ' + endTimeString + '. ' + winnerString}
                   </Typography>
                   {!dismissed && (
                     <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
