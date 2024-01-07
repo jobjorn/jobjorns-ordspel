@@ -278,19 +278,6 @@ const submitMove = async (
 
     let newTurn = playersCount == playedCount && playersCount > 0 && lastTurn;
 
-    // For the full code sample see here: https://github.com/ably/quickstart-js
-    const ablyApiKey = process.env.ABLY_API_KEY;
-    if (ablyApiKey) {
-      const ably = new Ably.Realtime.Promise(ablyApiKey);
-      await ably.connection.once('connected');
-      const channel = ably.channels.get('quickstart');
-      await channel.publish('move', {
-        gameId: gameId,
-        newTurn: newTurn
-      });
-      ably.close();
-    }
-
     if (!newTurn) {
       // turen är inte slut. dags att säga hejdå, efter att ha uppdaterat status
 
@@ -447,6 +434,19 @@ const submitMove = async (
           statusTime: new Date()
         }
       });
+    }
+
+    // For the full code sample see here: https://github.com/ably/quickstart-js
+    const ablyApiKey = process.env.ABLY_API_KEY;
+    if (ablyApiKey) {
+      const ably = new Ably.Realtime.Promise(ablyApiKey);
+      await ably.connection.once('connected');
+      const channel = ably.channels.get('quickstart');
+      await channel.publish('move', {
+        gameId: gameId,
+        newTurn: newTurn
+      });
+      ably.close();
     }
 
     return {
