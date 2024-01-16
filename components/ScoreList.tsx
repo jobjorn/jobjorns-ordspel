@@ -8,7 +8,7 @@ import {
   TableRow,
   Paper
 } from '@mui/material';
-import { Move, Turn } from '@prisma/client';
+import { Move, Turn, User } from '@prisma/client';
 import { GameWithEverything } from 'types/types';
 import { amber, blue, grey } from '@mui/material/colors';
 import { useEffect, useState } from 'react';
@@ -50,6 +50,20 @@ export const ScoreList = ({ game }: ScoreListProps) => {
     }
   }, [game.finished]);
 
+  const sortPlayers = (a: User, b: User) => {
+    if (a.sub == user?.sub) {
+      return -1;
+    } else if (b.sub == user?.sub) {
+      return 1;
+    } else if (a.name.localeCompare > b.name.localeCompare) {
+      return -1;
+    } else if (a.name.localeCompare < b.name.localeCompare) {
+      return 1;
+    } else {
+      return 0;
+    }
+  };
+
   return (
     <Container maxWidth="sm" sx={{ flexShrink: 0, margin: 0 }}>
       <Modal
@@ -84,22 +98,27 @@ export const ScoreList = ({ game }: ScoreListProps) => {
           <TableHead>
             <TableRow>
               <TableCell />
-              {game.users.map((player) => (
-                <TableCell key={player.userSub} style={{ fontWeight: 'bold' }}>
-                  {player.user.name}
-                  <SingleScorePoints
-                    points={
-                      userPoints.find((x) => x.userSub == player.userSub)
-                        ?.points
-                    }
-                    won={
-                      Math.max(...userPoints.map((x) => x.points)) ==
-                      userPoints.find((x) => x.userSub == player.userSub)
-                        ?.points
-                    }
-                  />
-                </TableCell>
-              ))}
+              {game.users
+                .sort((a, b) => sortPlayers(a.user, b.user))
+                .map((player) => (
+                  <TableCell
+                    key={player.userSub}
+                    style={{ fontWeight: 'bold' }}
+                  >
+                    {player.user.name}
+                    <SingleScorePoints
+                      points={
+                        userPoints.find((x) => x.userSub == player.userSub)
+                          ?.points
+                      }
+                      won={
+                        Math.max(...userPoints.map((x) => x.points)) ==
+                        userPoints.find((x) => x.userSub == player.userSub)
+                          ?.points
+                      }
+                    />
+                  </TableCell>
+                ))}
               {game.invitations.map((invitation) => (
                 <TableCell key={invitation.id} style={{ fontWeight: 'bold' }}>
                   {invitation.email}
@@ -109,16 +128,18 @@ export const ScoreList = ({ game }: ScoreListProps) => {
             {game.turns.map((turn) => (
               <TableRow key={turn.id}>
                 <TableCell>{turn.turnNumber}</TableCell>
-                {game.users.map((player) => (
-                  <SingleScore
-                    key={player.userSub}
-                    isCurrentTurn={turn.turnNumber == game.currentTurn}
-                    isSelf={player.userSub == user?.sub}
-                    move={turn.moves.find(
-                      (move) => move.userSub == player.userSub
-                    )}
-                  />
-                ))}
+                {game.users
+                  .sort((a, b) => sortPlayers(a.user, b.user))
+                  .map((player) => (
+                    <SingleScore
+                      key={player.userSub}
+                      isCurrentTurn={turn.turnNumber == game.currentTurn}
+                      isSelf={player.userSub == user?.sub}
+                      move={turn.moves.find(
+                        (move) => move.userSub == player.userSub
+                      )}
+                    />
+                  ))}
                 {game.invitations.map((invitation) => (
                   <TableCell key={invitation.id}>
                     <div
