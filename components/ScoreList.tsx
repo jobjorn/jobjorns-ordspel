@@ -55,12 +55,8 @@ export const ScoreList = ({ game }: ScoreListProps) => {
       return -1;
     } else if (b.sub == user?.sub) {
       return 1;
-    } else if (a.name.localeCompare > b.name.localeCompare) {
-      return -1;
-    } else if (a.name.localeCompare < b.name.localeCompare) {
-      return 1;
     } else {
-      return 0;
+      return a.name.localeCompare(b.name);
     }
   };
 
