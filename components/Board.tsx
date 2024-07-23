@@ -73,14 +73,14 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
   useEffect(() => {
     const ablyApiKey = process.env.NEXT_PUBLIC_ABLY_SUBSCRIBE_KEY;
     if (ablyApiKey) {
-      const ably = new Ably.Realtime.Promise(ablyApiKey);
+      const ably = new Ably.Realtime(ablyApiKey);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      ably.connection.on((stateChange: Ably.Types.ConnectionStateChange) => {
+      ably.connection.on((stateChange: Ably.ConnectionStateChange) => {
         // console.log(stateChange);
       });
 
       const channel = ably.channels.get('quickstart');
-      channel.subscribe((message: Ably.Types.Message) => {
+      channel.subscribe((message: Ably.Message) => {
         if (message.name == 'move' && message.data.gameId == game.id) {
           fetchGame(game.id);
           if (message.data.newTurn) {
