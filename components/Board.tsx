@@ -4,11 +4,9 @@ import {
   Backdrop,
   Button,
   Container,
-  LinearProgress,
   Modal,
   Paper,
   Stack,
-  Tooltip,
   Typography,
   styled
 } from '@mui/material';
@@ -34,6 +32,7 @@ import {
 import Ably from 'ably';
 import Head from 'next/head';
 import { TileHolder } from './TileHolder';
+import { PointsMeter } from './PointsMeter';
 
 const emptyTile: TileType = {
   letter: '',
@@ -499,27 +498,7 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
         selectTile={selectTile}
       />
 
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ alignItems: 'center', marginBottom: 1 }}
-      >
-        <Tooltip title="Extrapoäng baserat på ordets längd">
-          <LinearProgress
-            sx={{ flexGrow: 1, height: '12px', borderRadius: '6px' }}
-            variant="determinate"
-            value={(bonusPoints / 33) * 100}
-          />
-        </Tooltip>
-        <Typography
-          variant="h6"
-          component={'p'}
-          color="text.secondary"
-          style={{ textAlign: 'right' }}
-        >
-          +{bonusPoints}
-        </Typography>
-      </Stack>
+      <PointsMeter progress={8 - tiles.length} bonusPoints={bonusPoints} />
 
       <Stack direction="row" spacing={1}>
         {tiles.length > 0 ? (
