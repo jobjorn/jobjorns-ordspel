@@ -1,15 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
 import { getUser } from 'services/authorization';
-import { WrongTurnData } from 'types/types';
+import { WrongTurnsData } from 'types/types';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
 });
 
-const getWrongTurnData = async () => {
+const getWrongTurnsData = async () => {
   try {
-    const wrongTurnResult: WrongTurnData[] = await prisma.game.findMany({
+    const wrongTurnsResult: WrongTurnsData[] = await prisma.game.findMany({
       include: {
         users: {
           include: {
@@ -18,11 +18,16 @@ const getWrongTurnData = async () => {
         },
         turns: {
           include: {
-            moves: true
+            moves: {
+              select: {
+                userSub: true
+              }
+            }
           },
           orderBy: {
             id: 'desc'
-          }
+          },
+          take: 1
         }
       },
       orderBy: {
@@ -30,12 +35,12 @@ const getWrongTurnData = async () => {
       }
     });
 
-    if (wrongTurnResult.length === 0) {
+    if (wrongTurnsResult.length === 0) {
       throw new Error('Ingen data hittades');
     }
     return {
       message: 'Det gick bra, här är datat',
-      data: wrongTurnResult
+      data: wrongTurnsResult
     };
   } catch (error) {
     return { message: 'Det blev ett error: ' + error };
@@ -57,7 +62,7 @@ const wrongturns = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     try {
-      const result = await getWrongTurnData();
+      const result = await getWrongTurnsData();
       res.status(200).json(result);
     } catch (error) {
       console.error(error);

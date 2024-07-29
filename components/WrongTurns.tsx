@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { ResponseType, WrongTurnData } from 'types/types';
+import { ResponseType, WrongTurnsData } from 'types/types';
+import styled from '@emotion/styled';
+import { Button } from '@mui/material';
 
-const getWrongTurnData = async (): Promise<ResponseType<WrongTurnData[]>> => {
+const getWrongTurnsData = async (): Promise<ResponseType<WrongTurnsData[]>> => {
   const defaultHeaders = {
     Accept: 'application/json',
     'Content-Type': 'application/json;charset=UTF-8'
   };
-  const url = '/api/wrongturn/';
+  const url = '/api/admin/wrongturns/';
   const options = {
     method: 'GET',
     headers: defaultHeaders
@@ -39,12 +41,12 @@ const getWrongTurnData = async (): Promise<ResponseType<WrongTurnData[]>> => {
 };
 
 export const WrongTurns = () => {
-  let [wrongTurnData, setWrongTurnData] = useState<WrongTurnData[] | null>(
+  let [wrongTurnData, setWrongTurnData] = useState<WrongTurnsData[] | null>(
     null
   );
 
   const fetchWrongTurnData = async () => {
-    let newWrongTurnData = await getWrongTurnData();
+    let newWrongTurnData = await getWrongTurnsData();
 
     if (newWrongTurnData.success && newWrongTurnData.data) {
       setWrongTurnData(newWrongTurnData.data);
@@ -62,34 +64,140 @@ export const WrongTurns = () => {
   return (
     <>
       <h2>Wrong turns</h2>
-      <table>
+      <table style={{ borderCollapse: 'collapse' }}>
         {wrongTurnData.map((game, index) => (
-          <>
-            <tr key={index}>
-              <td style={{ borderBottom: '1px solid white' }}>
-                <h4>
-                  {game.id} ({game.finished ? '✅' : '❌'})
-                </h4>
-              </td>
-              <td style={{ borderBottom: '1px solid white' }}>
-                <ul>
-                  {game.users.map((user, index) => (
-                    <li key={index}>
-                      {user.user.name} ({user.status}) (in latest turn:
-                      {
-                        game.turns[0].moves.filter(
-                          (move) => move.userSub === user.user.sub
-                        ).length
-                      }
-                      )
-                    </li>
-                  ))}
-                </ul>
-              </td>
-            </tr>
-          </>
+          <WrongTurnRow key={index} game={game} />
         ))}
       </table>
     </>
+  );
+};
+
+export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
+  let errorInStatus = false;
+  game.users.forEach((user) => {
+    if (
+      user.status === 'OTHERTURN' &&
+      game.turns[0].moves.filter((move) => move.userSub === user.user.sub)
+        .length === 0
+    ) {
+      errorInStatus = true;
+    } else if (
+      user.status === 'YOURTURN' &&
+      game.turns[0].moves.filter((move) => move.userSub === user.user.sub)
+        .length > 0
+    ) {
+      errorInStatus = true;
+    }
+  });
+
+  return (
+    <>
+      {game.users.map((user, index) => (
+        <tr key={index}>
+          {index === 0 && (
+            <>
+              <td
+                style={{ borderBottom: '1px solid white' }}
+                rowSpan={game.users.length}
+              >
+                {game.id}
+              </td>
+
+              <td
+                style={{ borderBottom: '1px solid white' }}
+                rowSpan={game.users.length}
+              >
+                {game.finished ? ' 🏁' : ''}
+              </td>
+            </>
+          )}
+          <td style={{ borderBottom: '1px solid white' }}>{user.user.name}</td>
+          <StatusTd status={user.status}>{user.status}</StatusTd>
+          <td style={{ borderBottom: '1px solid white' }}>
+            (in latest turn:
+            {
+              game.turns[0].moves.filter(
+                (move) => move.userSub === user.user.sub
+              ).length
+            }
+            )
+          </td>
+
+          {index === 0 && (
+            <td
+              style={{ borderBottom: '1px solid white' }}
+              rowSpan={game.users.length}
+            >
+              {errorInStatus ? <FixButton gameId={game.id} /> : '🦖'}
+            </td>
+          )}
+        </tr>
+      ))}
+    </>
+  );
+};
+
+const StatusTd = styled('td')<{ status: string }>(({ status }) => ({
+  backgroundColor:
+    status === 'OTHERTURN'
+      ? '#f44336'
+      : status === 'YOURTURN'
+      ? '#4caf50'
+      : status === 'FINISHED'
+      ? '#3f51b5'
+      : status === 'INVITED'
+      ? '#ffc107'
+      : 'black',
+  borderBottom: '1px solid white'
+}));
+
+const FixButton = ({ gameId }: { gameId: number }) => {
+  const [loading, setLoading] = useState(false);
+
+  const fixGame = async () => {
+    setLoading(true);
+
+    const url = '/api/admin/wrongturns/' + gameId;
+    const options = {
+      method: 'PATCH',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json;charset=UTF-8'
+      }
+    };
+
+    try {
+      let response = await fetch(url, options).then((res) => res.json());
+
+      setLoading(false);
+
+      if (response.data) {
+        return {
+          success: true,
+          data: response.data
+        };
+      } else {
+        throw new Error('No data');
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        return {
+          success: false,
+          error: error
+        };
+      } else {
+        return {
+          success: false,
+          error: new Error('Unknown error')
+        };
+      }
+    }
+  };
+
+  return (
+    <Button variant="contained" onClick={fixGame}>
+      {loading ? '...' : 'Fixa'}
+    </Button>
   );
 };
