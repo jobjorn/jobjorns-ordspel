@@ -439,7 +439,7 @@ const submitMove = async (
     // For the full code sample see here: https://github.com/ably/quickstart-js
     const ablyApiKey = process.env.ABLY_API_KEY;
     if (ablyApiKey) {
-      const ably = new Ably.Realtime.Promise(ablyApiKey);
+      const ably = new Ably.Realtime(ablyApiKey);
       await ably.connection.once('connected');
       const channel = ably.channels.get('quickstart');
       await channel.publish('move', {
