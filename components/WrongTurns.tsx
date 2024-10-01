@@ -64,7 +64,15 @@ export const WrongTurns = () => {
   return (
     <>
       <h2>Wrong turns</h2>
-      <table style={{ borderCollapse: 'collapse' }}>
+      <table style={{}}>
+        <thead>
+          <tr>
+            <th>Användare</th>
+            <th>Status</th>
+            <th>Drag senaste turen</th>
+            <th>Fixa?</th>
+          </tr>
+        </thead>
         <tbody>
           {wrongTurnData.map((game, index) => (
             <WrongTurnRow key={index} game={game} />
@@ -120,28 +128,19 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
 
   return (
     <>
+      {game.users.length > 0 && (
+        <tr>
+          <td style={{ fontSize: '2em' }}>
+            {game.id}
+            {game.finished ? ' 🏁' : ''}
+          </td>
+        </tr>
+      )}
       {game.users.map((user, index) => (
-        <tr key={index}>
-          {index === 0 && (
-            <>
-              <td
-                style={{ borderBottom: '1px solid white' }}
-                rowSpan={game.users.length + game.invitations.length}
-              >
-                {game.id}
-              </td>
-
-              <td
-                style={{ borderBottom: '1px solid white' }}
-                rowSpan={game.users.length + game.invitations.length}
-              >
-                {game.finished ? ' 🏁' : ''}
-              </td>
-            </>
-          )}
-          <td style={{ borderBottom: '1px solid white' }}>{user.user.name}</td>
+        <tr key={index * 2}>
+          <td>{user.user.name}</td>
           <StatusTd status={user.status}>{user.status}</StatusTd>
-          <td style={{ borderBottom: '1px solid white' }}>
+          <td>
             (in latest turn:
             {
               game.turns[0].moves.filter(
@@ -152,22 +151,17 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
           </td>
 
           {index === 0 && (
-            <td
-              style={{ borderBottom: '1px solid white' }}
-              rowSpan={game.users.length + game.invitations.length}
-            >
-              {errorInStatus ? <FixButton gameId={game.id} /> : '🦖'}
+            <td rowSpan={game.users.length + game.invitations.length}>
+              {errorInStatus ? <FixButton gameId={game.id} /> : ''}
             </td>
           )}
         </tr>
       ))}
       {game.invitations.map((invitation, index) => (
-        <tr key={index}>
-          <td style={{ borderBottom: '1px solid white' }}>
-            {invitation.email}
-          </td>
+        <tr key={index * 2 + 1}>
+          <td>{invitation.email}</td>
           <StatusTd status="INVITED">INVITED</StatusTd>
-          <td style={{ borderBottom: '1px solid white' }}>(invited)</td>
+          <td>(invited)</td>
         </tr>
       ))}
     </>
@@ -184,8 +178,7 @@ const StatusTd = styled('td')<{ status: string }>(({ status }) => ({
       ? '#3f51b5'
       : status === 'INVITED'
       ? '#ffc107'
-      : 'black',
-  borderBottom: '1px solid white'
+      : 'black'
 }));
 
 const fixGameSubmit = async (gameId: number) => {
