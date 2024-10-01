@@ -30,7 +30,8 @@ const fixGame = async (gameId: number) => {
               id: 'desc'
             },
             take: 1
-          }
+          },
+          invitations: true
         },
         where: {
           id: gameId
@@ -38,27 +39,98 @@ const fixGame = async (gameId: number) => {
       }
     );
 
-    wrongTurnResult.users.forEach((user) => {
-      if (wrongTurnResult.finished && user.status !== 'FINISHED') {
-        console.log('Ändrar status för ' + user.user.name + ' till FINISHED');
-      } else if (
-        user.status === 'OTHERTURN' &&
-        wrongTurnResult.turns[0].moves.filter(
-          (move) => move.userSub === user.user.sub
-        ).length === 0
-      ) {
-        console.log('Ändrar status för ' + user.user.name + ' till YOURTURN');
-      } else if (
-        user.status === 'YOURTURN' &&
-        wrongTurnResult.turns[0].moves.filter(
-          (move) => move.userSub === user.user.sub
-        ).length > 0
-      ) {
-        console.log('Ändrar status för ' + user.user.name + ' till OTHERTURN');
-      } else {
-        console.log('Ingen ändring förefaller behövas');
-      }
-    });
+    let messages: string[] = [];
+    let yourTurn = false;
+    messages = await Promise.all(
+      wrongTurnResult.users.map(async (user) => {
+        // Om spelet är avslutat och användaren inte är avslutad
+        if (wrongTurnResult.finished && user.status !== 'FINISHED') {
+          await prisma.usersOnGames.update({
+            where: {
+              userSub_gameId: {
+                userSub: user.userSub,
+                gameId: gameId
+              }
+            },
+            data: {
+              status: 'FINISHED'
+            }
+          });
+          return 'Ändrade status för ' + user.user.name + ' till FINISHED';
+        }
+        // Om det inte är användarens tur och användaren inte har gjort något drag
+        else if (
+          user.status === 'OTHERTURN' &&
+          wrongTurnResult.turns[0].moves.filter(
+            (move) => move.userSub === user.user.sub
+          ).length === 0
+        ) {
+          await prisma.usersOnGames.update({
+            where: {
+              userSub_gameId: {
+                userSub: user.userSub,
+                gameId: gameId
+              }
+            },
+            data: {
+              status: 'YOURTURN'
+            }
+          });
+          return 'Ändrade status för ' + user.user.name + ' till YOURTURN';
+        }
+        // Om det är användarens tur och användaren har gjort ett drag,
+        // såvida inte alla gjort ett drag
+        else if (
+          user.status === 'YOURTURN' &&
+          wrongTurnResult.turns[0].moves.filter(
+            (move) => move.userSub === user.user.sub
+          ).length > 0 &&
+          wrongTurnResult.users.length + wrongTurnResult.invitations.length !==
+            wrongTurnResult.turns[0].moves.length
+        ) {
+          yourTurn = true;
+          await prisma.usersOnGames.update({
+            where: {
+              userSub_gameId: {
+                userSub: user.userSub,
+                gameId: gameId
+              }
+            },
+            data: {
+              status: 'OTHERTURN'
+            }
+          });
+          return 'Ändrade status för ' + user.user.name + ' till OTHERTURN';
+        } else {
+          return 'Ingen ändring förefaller behövas för ' + user.user.name;
+        }
+      })
+    );
+
+    // Om det inte är någons tur och spelet inte är avslutat
+
+    let messages2: string[] = [];
+    if (
+      !yourTurn &&
+      !wrongTurnResult.finished &&
+      wrongTurnResult.invitations.length === 0
+    ) {
+      await prisma.usersOnGames.updateMany({
+        where: {
+          gameId: gameId,
+          status: 'OTHERTURN'
+        },
+        data: {
+          status: 'YOURTURN'
+        }
+      });
+      messages2.push('Ändrade status för alla till YOURTURN');
+    }
+
+    let message = [...messages, ...messages2].join(', ');
+
+    console.log(message);
+    return { message: message };
   } catch (error) {
     return { message: 'Det blev ett error: ' + error };
   }
@@ -101,14 +173,13 @@ const fixWrongTurn = async (req: NextApiRequest, res: NextApiResponse) => {
         throw new Error('Något gick fel, safeParse lyckades inte');
       }
 
-      let result;
       try {
-        result = await fixGame(parsedInput.data.gameId);
+        let result = await fixGame(parsedInput.data.gameId);
+
+        res.status(200).json(result);
       } catch (error) {
         console.error(error);
       }
-
-      res.status(200).json(result);
     } catch (error) {
       console.error(error);
       res.status(500).end('Något gick fel.');

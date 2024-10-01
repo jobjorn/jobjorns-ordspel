@@ -104,6 +104,7 @@ export type WrongTurnsData = Prisma.GameGetPayload<{
       };
       take: 1;
     };
+    invitations: true;
   };
   orderBy: {
     id: 'desc';

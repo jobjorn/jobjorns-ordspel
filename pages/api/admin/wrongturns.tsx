@@ -28,7 +28,8 @@ const getWrongTurnsData = async () => {
             id: 'desc'
           },
           take: 1
-        }
+        },
+        invitations: true
       },
       orderBy: {
         id: 'desc'
