@@ -89,7 +89,6 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
   game.users.forEach((user) => {
     // Om spelet är avslutat och användaren inte är avslutad
     if (user.status !== 'FINISHED' && game.finished) {
-      console.log(game.id, 'if 1');
       errorInStatus = true;
     }
     // Om det inte är användarens tur och användaren inte har gjort något drag
@@ -98,7 +97,6 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
       game.turns[0].moves.filter((move) => move.userSub === user.user.sub)
         .length === 0
     ) {
-      console.log(game.id, 'if 2');
       errorInStatus = true;
     }
     // Om det är användarens tur och användaren har gjort ett drag,
@@ -109,20 +107,17 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
         .length > 0 &&
       game.users.length + game.invitations.length !== game.turns[0].moves.length
     ) {
-      console.log(game.id, 'if 3');
       yourTurn = true;
       errorInStatus = true;
     }
     // Om det är någons tur
     else if (user.status === 'YOURTURN' || user.status === 'INVITED') {
-      console.log(game.id, 'if 4');
       yourTurn = true;
     }
   });
 
   // Om det inte är någons tur och spelet inte är avslutat
   if (!yourTurn && !game.finished && game.invitations.length === 0) {
-    console.log(game.id, 'if 5');
     errorInStatus = true;
   }
 
@@ -182,7 +177,6 @@ const StatusTd = styled('td')<{ status: string }>(({ status }) => ({
 }));
 
 const fixGameSubmit = async (gameId: number) => {
-  console.log('fixing game', gameId);
   const url = '/api/admin/wrongturns/' + gameId;
   const options = {
     method: 'PATCH',
