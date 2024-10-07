@@ -103,9 +103,9 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
     // såvida inte alla gjort ett drag
     else if (
       user.status === 'YOURTURN' &&
+      game.turns.length > 0 &&
       game.turns[0].moves.filter((move) => move.userSub === user.user.sub)
-        .length > 0 &&
-      game.users.length + game.invitations.length !== game.turns[0].moves.length
+        .length > 0
     ) {
       yourTurn = true;
       errorInStatus = true;
@@ -137,11 +137,11 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
           <StatusTd status={user.status}>{user.status}</StatusTd>
           <td>
             (in latest turn:
-            {
-              game.turns[0].moves.filter(
-                (move) => move.userSub === user.user.sub
-              ).length
-            }
+            {game.turns.length > 0
+              ? game.turns[0].moves.filter(
+                  (move) => move.userSub === user.user.sub
+                ).length
+              : 0}
             )
           </td>
 

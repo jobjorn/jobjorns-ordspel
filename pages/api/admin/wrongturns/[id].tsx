@@ -41,6 +41,7 @@ const fixGame = async (gameId: number) => {
 
     let messages: string[] = [];
     let yourTurn = false;
+    let startNewTurn = false;
     messages = await Promise.all(
       wrongTurnResult.users.map(async (user) => {
         // Om spelet är avslutat och användaren inte är avslutad
@@ -101,15 +102,27 @@ const fixGame = async (gameId: number) => {
             }
           });
           return 'Ändrade status för ' + user.user.name + ' till OTHERTURN';
+        }
+        // Om alla har gjort ett drag
+        else if (
+          user.status === 'YOURTURN' &&
+          wrongTurnResult.turns[0].moves.filter(
+            (move) => move.userSub === user.user.sub
+          ).length > 0 &&
+          wrongTurnResult.users.length + wrongTurnResult.invitations.length ===
+            wrongTurnResult.turns[0].moves.length
+        ) {
+          startNewTurn = true;
+          return 'Behöver starta ny tur i spel ' + gameId;
         } else {
           return 'Ingen ändring förefaller behövas för ' + user.user.name;
         }
       })
     );
 
-    // Om det inte är någons tur och spelet inte är avslutat
-
     let messages2: string[] = [];
+
+    // Om det inte är någons tur och spelet inte är avslutat
     if (
       !yourTurn &&
       !wrongTurnResult.finished &&
@@ -125,6 +138,23 @@ const fixGame = async (gameId: number) => {
         }
       });
       messages2.push('Ändrade status för alla till YOURTURN');
+    }
+
+    // Om alla har gjort ett drag och det behöver startas en ny tur
+    if (startNewTurn) {
+      /*
+      await prisma.game.update({
+        data: {
+          currentTurn: {
+            increment: 1
+          }
+        },
+        where: {
+          id: gameId
+        }
+      });
+      messages2.push('Startade ny tur i spel ' + gameId);
+      */
     }
 
     let message = [...messages, ...messages2].join(', ');
