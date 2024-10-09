@@ -105,7 +105,8 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
       user.status === 'YOURTURN' &&
       game.turns.length > 0 &&
       game.turns[0].moves.filter((move) => move.userSub === user.user.sub)
-        .length > 0
+        .length > 0 &&
+      game.turns[0].turnNumber === game.currentTurn
     ) {
       yourTurn = true;
       errorInStatus = true;
@@ -125,9 +126,12 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
     <>
       {game.users.length > 0 && (
         <tr>
-          <td style={{ fontSize: '2em' }}>
-            {game.id}
-            {game.finished ? ' 🏁' : ''}
+          <td>
+            <span style={{ fontSize: '2em' }}>
+              {game.id}
+              {game.finished ? ' 🏁' : ''}
+            </span>
+            {game.currentTurn}
           </td>
         </tr>
       )}
@@ -142,7 +146,7 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
                   (move) => move.userSub === user.user.sub
                 ).length
               : 0}
-            )
+            ) ({game.turns.length > 0 && game.turns[0].turnNumber})
           </td>
 
           {index === 0 && (
