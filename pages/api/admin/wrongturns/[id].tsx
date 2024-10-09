@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { getUser } from 'services/authorization';
 import { z } from 'zod';
 import { WrongTurnsData } from 'types/types';
+import { generateNewTurn, getGame } from 'pages/api/games/[id]';
 
 const prisma = new PrismaClient({
   log: ['warn', 'error']
@@ -142,19 +143,13 @@ const fixGame = async (gameId: number) => {
 
     // Om alla har gjort ett drag och det behöver startas en ny tur
     if (startNewTurn) {
-      /*
-      await prisma.game.update({
-        data: {
-          currentTurn: {
-            increment: 1
-          }
-        },
-        where: {
-          id: gameId
-        }
-      });
+      const game = await getGame(gameId);
+      if (game.data === undefined) {
+        return 'Kunde inte hämta spelet';
+      }
+      await generateNewTurn(game.data);
+
       messages2.push('Startade ny tur i spel ' + gameId);
-      */
     }
 
     let message = [...messages, ...messages2].join(', ');
