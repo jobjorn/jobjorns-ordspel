@@ -1,21 +1,8 @@
-import {
-  LinearProgress,
-  Stack,
-  Tooltip,
-  Typography,
-  Box,
-  styled
-} from '@mui/material';
+import { LinearProgress, Stack, Tooltip, Box, styled } from '@mui/material';
 import { bonusPointsSums } from 'data/defaults';
 import React from 'react';
 
-export const PointsMeter = ({
-  progress,
-  bonusPoints
-}: {
-  progress: number;
-  bonusPoints: number;
-}) => {
+export const PointsMeter = ({ progress }: { progress: number }) => {
   return (
     <>
       <Stack
@@ -24,7 +11,7 @@ export const PointsMeter = ({
         sx={{ alignItems: 'center', marginBottom: 1, padding: '0 2em' }}
       >
         <Box style={{ flexGrow: 1 }}>
-          <Box style={{ width: '100%' }}>
+          <Box style={{ width: '100%', marginTop: '-17px' }}>
             <MeterGridCell count={1}>
               &nbsp;
               <br />
