@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ResponseType, WrongTurnsData } from 'types/types';
 import styled from '@emotion/styled';
-import { Button } from '@mui/material';
+import { Button, CircularProgress, Container } from '@mui/material';
 
 const getWrongTurnsData = async (): Promise<ResponseType<WrongTurnsData[]>> => {
   const defaultHeaders = {
@@ -58,7 +58,11 @@ export const WrongTurns = () => {
   }, []);
 
   if (!wrongTurnData) {
-    return <h2>herping</h2>;
+    return (
+      <Container maxWidth="sm" style={{ textAlign: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
   }
 
   return (
@@ -69,7 +73,8 @@ export const WrongTurns = () => {
           <tr>
             <th>Användare</th>
             <th>Status</th>
-            <th>Drag senaste turen</th>
+            <th>Tur</th>
+            <th>Drag senaste turen (tur)</th>
             <th>Fixa?</th>
           </tr>
         </thead>
@@ -131,7 +136,6 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
               {game.id}
               {game.finished ? ' 🏁' : ''}
             </span>
-            {game.currentTurn}
           </td>
         </tr>
       )}
@@ -139,14 +143,14 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
         <tr key={index * 2}>
           <td>{user.user.name}</td>
           <StatusTd status={user.status}>{user.status}</StatusTd>
+          <td>{game.currentTurn}</td>
           <td>
-            (in latest turn:
             {game.turns.length > 0
               ? game.turns[0].moves.filter(
                   (move) => move.userSub === user.user.sub
                 ).length
-              : 0}
-            ) ({game.turns.length > 0 && game.turns[0].turnNumber})
+              : 0}{' '}
+            ({game.turns.length > 0 && game.turns[0].turnNumber})
           </td>
 
           {index === 0 && (
@@ -160,7 +164,8 @@ export const WrongTurnRow = ({ game }: { game: WrongTurnsData }) => {
         <tr key={index * 2 + 1}>
           <td>{invitation.email}</td>
           <StatusTd status="INVITED">INVITED</StatusTd>
-          <td>(invited)</td>
+          <td>{game.currentTurn}</td>
+          <td>0 (invited)</td>
         </tr>
       ))}
     </>
