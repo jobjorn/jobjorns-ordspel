@@ -58,7 +58,6 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
   const [shakingTiles, setShakingTiles] = useState<number[]>([]);
   const [placedTiles, setPlacedTiles] = useState<number[]>([]);
   const [currentPoints, setCurrentPoints] = useState<number>(0);
-  const [bonusPoints, setBonusPoints] = useState<number>(0);
   const [nameList, setNameList] = useState<string>('');
 
   const addAlerts = (newAlerts: AlertType[]) => {
@@ -173,7 +172,6 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
     let newBonusPoints = tilePoints(unplayedBoard);
 
     setCurrentPoints(newWordPoints + newBonusPoints);
-    setBonusPoints(newBonusPoints);
   }, [unplayedBoard, placedTiles]);
 
   const shuffleTileHolder = () => {
@@ -498,7 +496,7 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
         selectTile={selectTile}
       />
 
-      <PointsMeter progress={8 - tiles.length} bonusPoints={bonusPoints} />
+      <PointsMeter progress={8 - tiles.length} />
 
       <Stack direction="row" spacing={1}>
         {tiles.length > 0 ? (
