@@ -9,7 +9,7 @@ import {
   wordPoints
 } from 'services/game';
 import Ably from 'ably';
-import { Tile } from 'types/types';
+import { GameWithEverything, Tile } from 'types/types';
 import { getUser } from 'services/authorization';
 import { z } from 'zod';
 
@@ -17,7 +17,7 @@ const prisma = new PrismaClient({
   log: ['warn', 'error']
 });
 
-const getGame = async (gameId: number) => {
+export const getGame = async (gameId: number) => {
   try {
     const getGamePrisma = await prisma.game.findUnique({
       where: {
@@ -273,8 +273,6 @@ const submitMove = async (
     let lastTurn = game.data.turns[0];
     lastTurn.moves.push(createMove); // lägg in draget vi just sparade
     let playedCount = lastTurn?.moves.length;
-    let allSkipped = true;
-    let gameEnded = false;
 
     let newTurn = playersCount == playedCount && playersCount > 0 && lastTurn;
 
@@ -301,145 +299,13 @@ const submitMove = async (
     }
 
     // annars är det dags för ett nytt drag
-    // definiera det vinnande draget eller konstatera att alla skippade
-    let winningMove = lastTurn.moves[0];
-    lastTurn.moves.map((move) => {
-      if (
-        move.playedPoints > winningMove.playedPoints ||
-        (move.playedPoints == winningMove.playedPoints &&
-          move.playedTime < winningMove.playedTime)
-      ) {
-        winningMove = move;
-      }
+    await generateNewTurn(game.data, lastTurn);
 
-      // om någon har lagt ett ord är det inte alla som har skippat
-      if (move.playedWord !== '') {
-        allSkipped = false;
-      }
-    });
-
-    if (allSkipped) {
-      gameEnded = true;
-    }
-
-    // markera det vinnande draget som vunnet
-    await prisma.move.update({
-      where: {
-        id: winningMove.id
-      },
-      data: {
-        won: true
-      }
-    });
-
-    // uppdatera poäng för alla spelare
-    // först en SQL-fråga för att räkna fram poäng per spelare
-    const newPoints: { userSub: string; total_points: bigint }[] =
-      await prisma.$queryRaw`
-      SELECT
-        "Move"."userSub",
-        SUM("Move"."playedPoints") AS total_points
-      FROM
-        "Turn"
-      JOIN
-        "Move" ON "Turn".id = "Move"."turnId"
-      WHERE
-        "Turn"."gameId" = ${gameId}
-      GROUP BY
-        "Move"."userSub";
-    `;
-
-    // sedan en map som uppdaterar respektive spelares poäng
-    if (newPoints.length > 0) {
-      newPoints.map(async (newPoint) => {
-        await prisma.usersOnGames.update({
-          where: {
-            userSub_gameId: {
-              gameId: gameId,
-              userSub: newPoint.userSub
-            }
-          },
-          data: {
-            points: Number(newPoint.total_points)
-          }
-        });
-      });
-    }
-
-    // dags att rita om brädet
-    // ta bort lagda brickor från "brickpåsen"
-    let letters = game.data.letters.split(',');
-    let playedLetters: string[] = [];
-    let parsedWinningBoard: Tile[][] = JSON.parse(winningMove.playedBoard);
-    parsedWinningBoard.map((row) =>
-      row.map((cell) => {
-        if (cell.placed === 'submitted') {
-          playedLetters.push(cell.letter);
-        }
-      })
-    );
-    playedLetters.forEach((letter) => {
-      let index = letters.indexOf(letter);
-      if (index > -1) {
-        letters.splice(index, 1);
-      }
-    });
-
-    // om det inte finns några brickor kvar är spelet slut!
-    if (letters.length == 0) {
-      gameEnded = true;
-    }
-
-    let newLetters = letters.join(',');
-
-    let winningBoard = winningMove.playedBoard
-      .replaceAll('latest', 'board')
-      .replaceAll('submitted', 'latest');
-
-    // uppdatera game-statet med en ny tur
-    await prisma.game.update({
-      data: {
-        letters: newLetters,
-        board: winningBoard,
-        latestWord: winningMove.playedBoard,
-        currentTurn: {
-          increment: 1
-        },
-        finished: gameEnded
-      },
-      where: {
-        id: gameId
-      }
-    });
-
-    if (gameEnded) {
-      // om spelet tagit slut, markera alla spelare som FINISHED
-      await prisma.usersOnGames.updateMany({
-        where: {
-          gameId: gameId
-        },
-        data: {
-          status: 'FINISHED',
-          statusTime: new Date()
-        }
-      });
-    } else {
-      // om spelet fortsätter så är det ny tur för alla
-      await prisma.usersOnGames.updateMany({
-        where: {
-          gameId: gameId
-        },
-        data: {
-          status: 'YOURTURN',
-          statusTime: new Date()
-        }
-      });
-    }
-
+    // Uppdatera anslutna ably-kanaler
     // For the full code sample see here: https://github.com/ably/quickstart-js
     const ablyApiKey = process.env.ABLY_API_KEY;
     if (ablyApiKey) {
-      const ably = new Ably.Realtime.Promise(ablyApiKey);
+      const ably = new Ably.Realtime(ablyApiKey);
       await ably.connection.once('connected');
       const channel = ably.channels.get('quickstart');
       await channel.publish('move', {
@@ -458,6 +324,154 @@ const submitMove = async (
       success: false,
       error: error
     };
+  }
+};
+
+export const generateNewTurn = async (
+  game: GameWithEverything,
+  lastTurn?: GameWithEverything['turns'][0]
+) => {
+  if (!lastTurn) {
+    lastTurn = game.turns[0];
+  }
+
+  let allSkipped = true;
+  let gameEnded = false;
+  let gameId = game.id;
+
+  // definiera det vinnande draget eller konstatera att alla skippade
+  let winningMove = lastTurn.moves[0];
+  lastTurn.moves.map((move) => {
+    if (
+      move.playedPoints > winningMove.playedPoints ||
+      (move.playedPoints == winningMove.playedPoints &&
+        move.playedTime < winningMove.playedTime)
+    ) {
+      winningMove = move;
+    }
+
+    // om någon har lagt ett ord är det inte alla som har skippat
+    if (move.playedWord !== '') {
+      allSkipped = false;
+    }
+  });
+
+  if (allSkipped) {
+    gameEnded = true;
+  }
+
+  // markera det vinnande draget som vunnet
+  await prisma.move.update({
+    where: {
+      id: winningMove.id
+    },
+    data: {
+      won: true
+    }
+  });
+
+  // uppdatera poäng för alla spelare
+  // först en SQL-fråga för att räkna fram poäng per spelare
+  const newPoints: { userSub: string; total_points: bigint }[] =
+    await prisma.$queryRaw`
+  SELECT
+    "Move"."userSub",
+    SUM("Move"."playedPoints") AS total_points
+  FROM
+    "Turn"
+  JOIN
+    "Move" ON "Turn".id = "Move"."turnId"
+  WHERE
+    "Turn"."gameId" = ${gameId}
+  GROUP BY
+    "Move"."userSub";
+`;
+
+  // sedan en map som uppdaterar respektive spelares poäng
+  if (newPoints.length > 0) {
+    newPoints.map(async (newPoint) => {
+      await prisma.usersOnGames.update({
+        where: {
+          userSub_gameId: {
+            gameId: gameId,
+            userSub: newPoint.userSub
+          }
+        },
+        data: {
+          points: Number(newPoint.total_points)
+        }
+      });
+    });
+  }
+
+  // dags att rita om brädet
+  // ta bort lagda brickor från "brickpåsen"
+  let letters = game.letters.split(',');
+  let playedLetters: string[] = [];
+  let parsedWinningBoard: Tile[][] = JSON.parse(winningMove.playedBoard);
+  parsedWinningBoard.map((row) =>
+    row.map((cell) => {
+      if (cell.placed === 'submitted') {
+        playedLetters.push(cell.letter);
+      }
+    })
+  );
+  playedLetters.forEach((letter) => {
+    let index = letters.indexOf(letter);
+    if (index > -1) {
+      letters.splice(index, 1);
+    }
+  });
+
+  // om det inte finns några brickor kvar är spelet slut!
+  if (letters.length == 0) {
+    gameEnded = true;
+  }
+
+  let newLetters = letters.join(',');
+
+  let winningBoard = winningMove.playedBoard
+    .replaceAll('latest', 'board')
+    .replaceAll('submitted', 'latest');
+
+  // uppdatera game-statet med en ny tur
+  await prisma.game.update({
+    data: {
+      letters: newLetters,
+      board: winningBoard,
+      latestWord: winningMove.playedBoard,
+      currentTurn: {
+        increment: 1
+      },
+      finished: gameEnded
+    },
+    where: {
+      id: gameId
+    }
+  });
+
+  if (gameEnded) {
+    // om spelet tagit slut, markera alla spelare som FINISHED
+    await prisma.usersOnGames.updateMany({
+      where: {
+        gameId: gameId
+      },
+      data: {
+        status: 'FINISHED',
+        statusTime: new Date()
+      }
+    });
+  } else {
+    // om spelet fortsätter så är det ny tur för alla
+    await prisma.usersOnGames.updateMany({
+      where: {
+        gameId: gameId
+      },
+      data: {
+        status: 'YOURTURN',
+        statusTime: new Date()
+      }
+    });
   }
 };
 

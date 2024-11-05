@@ -192,6 +192,13 @@ const NewGamePage: NextPage<{}> = () => {
               inte redan har konto.
             </Alert>
           )}
+          {selectedUsers.length + emailList.length > 1 && (
+            <Alert severity="info" sx={{ mb: 1 }} variant="outlined">
+              Ett spel kan ha flera deltagare - du bjuder nu in till ett spel
+              med dig och ytterligare {selectedUsers.length + emailList.length}{' '}
+              spelare.
+            </Alert>
+          )}
           <Stack direction="row" spacing={1} sx={{ my: 1 }}>
             <Button
               disabled={selectedUsers.length + emailList.length < 1}

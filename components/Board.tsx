@@ -4,11 +4,9 @@ import {
   Backdrop,
   Button,
   Container,
-  LinearProgress,
   Modal,
   Paper,
   Stack,
-  Tooltip,
   Typography,
   styled
 } from '@mui/material';
@@ -34,6 +32,7 @@ import {
 import Ably from 'ably';
 import Head from 'next/head';
 import { TileHolder } from './TileHolder';
+import { PointsMeter } from './PointsMeter';
 
 const emptyTile: TileType = {
   letter: '',
@@ -59,7 +58,6 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
   const [shakingTiles, setShakingTiles] = useState<number[]>([]);
   const [placedTiles, setPlacedTiles] = useState<number[]>([]);
   const [currentPoints, setCurrentPoints] = useState<number>(0);
-  const [bonusPoints, setBonusPoints] = useState<number>(0);
   const [nameList, setNameList] = useState<string>('');
 
   const addAlerts = (newAlerts: AlertType[]) => {
@@ -74,14 +72,14 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
   useEffect(() => {
     const ablyApiKey = process.env.NEXT_PUBLIC_ABLY_SUBSCRIBE_KEY;
     if (ablyApiKey) {
-      const ably = new Ably.Realtime.Promise(ablyApiKey);
+      const ably = new Ably.Realtime(ablyApiKey);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      ably.connection.on((stateChange: Ably.Types.ConnectionStateChange) => {
+      ably.connection.on((stateChange: Ably.ConnectionStateChange) => {
         // console.log(stateChange);
       });
 
       const channel = ably.channels.get('quickstart');
-      channel.subscribe((message: Ably.Types.Message) => {
+      channel.subscribe((message: Ably.Message) => {
         if (message.name == 'move' && message.data.gameId == game.id) {
           fetchGame(game.id);
           if (message.data.newTurn) {
@@ -174,7 +172,6 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
     let newBonusPoints = tilePoints(unplayedBoard);
 
     setCurrentPoints(newWordPoints + newBonusPoints);
-    setBonusPoints(newBonusPoints);
   }, [unplayedBoard, placedTiles]);
 
   const shuffleTileHolder = () => {
@@ -499,27 +496,7 @@ export const Board = ({ game, user: currentUser, fetchGame }: BoardProps) => {
         selectTile={selectTile}
       />
 
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ alignItems: 'center', marginBottom: 1 }}
-      >
-        <Tooltip title="Extrapoäng baserat på ordets längd">
-          <LinearProgress
-            sx={{ flexGrow: 1, height: '12px', borderRadius: '6px' }}
-            variant="determinate"
-            value={(bonusPoints / 33) * 100}
-          />
-        </Tooltip>
-        <Typography
-          variant="h6"
-          component={'p'}
-          color="text.secondary"
-          style={{ textAlign: 'right' }}
-        >
-          +{bonusPoints}
-        </Typography>
-      </Stack>
+      <PointsMeter progress={8 - tiles.length} />
 
       <Stack direction="row" spacing={1}>
         {tiles.length > 0 ? (

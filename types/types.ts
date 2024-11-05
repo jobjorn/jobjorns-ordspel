@@ -83,3 +83,30 @@ export const UserFromAuth0InputSchema = z.object({
 });
 
 export type UserFromAuth0Input = z.infer<typeof UserFromAuth0InputSchema>;
+
+export type WrongTurnsData = Prisma.GameGetPayload<{
+  include: {
+    users: {
+      include: {
+        user: true;
+      };
+    };
+    turns: {
+      include: {
+        moves: {
+          select: {
+            userSub: true;
+          };
+        };
+      };
+      orderBy: {
+        id: 'desc';
+      };
+      take: 1;
+    };
+    invitations: true;
+  };
+  orderBy: {
+    id: 'desc';
+  };
+}>;
