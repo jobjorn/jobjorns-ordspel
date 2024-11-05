@@ -20,6 +20,12 @@ const updateRemindersSetting = async (key: string) => {
 
     return updatedUser;
   } catch (error) {
+    if (error instanceof Error) {
+      return (
+        'Något gick fel, försök igen eller kontakta utvecklaren. Felmeddelande: ' +
+        error.message
+      );
+    }
     return 'Något gick fel, försök igen eller kontakta utvecklaren.';
   }
 };
